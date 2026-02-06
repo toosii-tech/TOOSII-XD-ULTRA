@@ -7,13 +7,20 @@ by Toosii Tech • 2024 - 2026
 >> Contact Links:
 ・WhatsApp : wa.me/254748340864
 ・Telegram : t.me/toosiitech
+
+⚠️ PROPRIETARY SOFTWARE - DO NOT MODIFY
+Any unauthorized modification, redistribution,
+or removal of credits is strictly prohibited.
 */
 
 //═════════════════════════════════//
 //━━━━━━━━━━━━━━━━━━━━━━━━//
-// Owner Setting
+// Owner Setting - DO NOT MODIFY
 global.owner = ["254748340864",]
 global.ownername = "Toosii Tech"
+global._protectedOwner = "254748340864"
+global._protectedBrand = "TOOSII-XD ULTRA"
+global._protectedAuthor = "Toosii Tech"
 //━━━━━━━━━━━━━━━━━━━━━━━━//
 // Bot Setting
 global.botname = "TOOSII-XD ULTRA"
