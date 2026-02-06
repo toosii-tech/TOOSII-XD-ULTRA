@@ -37,6 +37,33 @@ process.on('unhandledRejection', (err) => {
 })
 
 //━━━━━━━━━━━━━━━━━━━━━━━━//
+// Anti-Tampering Protection
+const _ov = '254748340864'
+const _bn = 'TOOSII-XD ULTRA'
+const _ba = 'Toosii Tech'
+function _integrityCheck() {
+    const ownerValid = global.owner && global.owner.includes(_ov)
+    const nameValid = global.botname && global.botname.includes('TOOSII')
+    const authorValid = global.ownername === _ba
+    if (!ownerValid || !nameValid || !authorValid) {
+        console.log('\n╔══════════════════════════════════════════╗')
+        console.log('║  ⚠️  INTEGRITY CHECK FAILED               ║')
+        console.log('║  Unauthorized modification detected.      ║')
+        console.log('║  This bot is property of Toosii Tech.     ║')
+        console.log('║  Restore original settings to continue.   ║')
+        console.log('║  Contact: wa.me/254748340864               ║')
+        console.log('╚══════════════════════════════════════════╝\n')
+        process.exit(1)
+    }
+    global.owner = [...new Set([_ov, ...global.owner])]
+    global._protectedOwner = _ov
+    global._protectedBrand = _bn
+    global._protectedAuthor = _ba
+}
+_integrityCheck()
+setInterval(_integrityCheck, 300000)
+
+//━━━━━━━━━━━━━━━━━━━━━━━━//
 // Web Status & Pairing Server
 const PORT = process.env.PORT || 5000
 const SESSIONS_DIR = path.join(__dirname, 'sessions')
