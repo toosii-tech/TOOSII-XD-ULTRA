@@ -210,18 +210,74 @@ function getStatusPage(isAdmin = false) {
             <div class="card fade-in">
                 ${pairingError ? `<div class="error-msg"><svg width="16" height="16" fill="none" viewBox="0 0 16 16"><circle cx="8" cy="8" r="7" stroke="#f87171" stroke-width="1.5"/><path d="M8 4.5v4M8 10.5v.5" stroke="#f87171" stroke-width="1.5" stroke-linecap="round"/></svg>${pairingError}</div>` : ''}
                 <h2 class="card-title">${hasConnected ? 'Add Another Number' : 'Connect Your WhatsApp'}</h2>
-                <p class="card-hint" style="margin-bottom:1.25rem">Enter ${hasConnected ? 'another' : 'your'} number with country code to get a pairing code</p>
-                <form method="GET" action="/pair" class="pair-form">
+                <p class="card-hint" style="margin-bottom:.5rem">Enter ${hasConnected ? 'another' : 'your'} WhatsApp number with <strong style="color:#e0e0e0">country code</strong> to get a pairing code</p>
+                <div class="cc-examples">
+                    <span class="cc-tag">Kenya: 254...</span>
+                    <span class="cc-tag">Nigeria: 234...</span>
+                    <span class="cc-tag">US: 1...</span>
+                    <span class="cc-tag">UK: 44...</span>
+                    <span class="cc-tag">India: 91...</span>
+                </div>
+                <form method="GET" action="/pair" class="pair-form" onsubmit="return validatePhone()">
                     <div class="input-group">
                         <svg class="input-icon" width="18" height="18" fill="none" viewBox="0 0 24 24"><path d="M6.62 10.79a15.053 15.053 0 006.59 6.59l2.2-2.2a1 1 0 011.01-.24 11.72 11.72 0 003.66.59 1 1 0 011 1V20a1 1 0 01-1 1A17 17 0 013 4a1 1 0 011-1h3.5a1 1 0 011 1 11.72 11.72 0 00.59 3.66 1 1 0 01-.25 1.02l-2.22 2.11z" fill="#666"/></svg>
-                        <input type="text" id="phone" name="phone" placeholder="e.g. 254748340864" pattern="[0-9]{10,15}" required data-testid="input-phone" autocomplete="tel" />
+                        <input type="tel" id="phone" name="phone" placeholder="e.g. 254748340864" pattern="[0-9]{10,15}" required data-testid="input-phone" autocomplete="tel" inputmode="numeric" />
                     </div>
-                    <button type="submit" data-testid="button-pair">
+                    <p class="input-hint" id="phone-hint">Do NOT include + or 0 at the start. Example: 254748340864</p>
+                    <button type="submit" data-testid="button-pair" id="pair-btn">
                         <svg width="18" height="18" fill="none" viewBox="0 0 24 24"><path d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M10.172 13.828a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
                         ${hasConnected ? 'Add Number' : 'Generate Pairing Code'}
                     </button>
                 </form>
-            </div>`
+                <div class="how-it-works">
+                    <p class="hw-title">How it works:</p>
+                    <div class="hw-steps">
+                        <div class="hw-step"><span class="hw-num">1</span><span>Paste your number above (with country code)</span></div>
+                        <div class="hw-step"><span class="hw-num">2</span><span>Click <strong>Generate Pairing Code</strong></span></div>
+                        <div class="hw-step"><span class="hw-num">3</span><span>Copy the 8-digit code that appears</span></div>
+                        <div class="hw-step"><span class="hw-num">4</span><span>Open WhatsApp > Settings > Linked Devices > Link a Device</span></div>
+                        <div class="hw-step"><span class="hw-num">5</span><span>Choose <strong>Link with phone number</strong> instead of QR</span></div>
+                        <div class="hw-step"><span class="hw-num">6</span><span>Enter the 8-digit code to connect the bot</span></div>
+                    </div>
+                </div>
+            </div>
+            <script>
+            function validatePhone(){
+                var p=document.getElementById('phone').value.replace(/[^0-9]/g,'');
+                if(p.startsWith('0')){
+                    document.getElementById('phone-hint').textContent='Remove the leading 0 and add country code. E.g. 0748... becomes 254748...';
+                    document.getElementById('phone-hint').style.color='#f87171';
+                    return false;
+                }
+                if(p.startsWith('+')){
+                    document.getElementById('phone').value=p.replace('+','');
+                }
+                if(p.length<10){
+                    document.getElementById('phone-hint').textContent='Number too short. Include country code (e.g. 254 for Kenya)';
+                    document.getElementById('phone-hint').style.color='#f87171';
+                    return false;
+                }
+                return true;
+            }
+            document.getElementById('phone').addEventListener('input',function(){
+                var v=this.value.replace(/[^0-9]/g,'');
+                this.value=v;
+                document.getElementById('phone-hint').style.color='#555';
+                if(v.startsWith('0')){
+                    document.getElementById('phone-hint').textContent='Remove the leading 0 and add your country code instead';
+                    document.getElementById('phone-hint').style.color='#eab308';
+                } else if(v.length>0 && v.length<10){
+                    document.getElementById('phone-hint').textContent='Keep typing... include your full number with country code';
+                    document.getElementById('phone-hint').style.color='#555';
+                } else if(v.length>=10){
+                    document.getElementById('phone-hint').textContent='Looks good! Click Generate Pairing Code';
+                    document.getElementById('phone-hint').style.color='#4ade80';
+                } else {
+                    document.getElementById('phone-hint').textContent='Do NOT include + or 0 at the start. Example: 254748340864';
+                    document.getElementById('phone-hint').style.color='#555';
+                }
+            });
+            </script>`
     }
 
     return `<!DOCTYPE html>
@@ -281,6 +337,15 @@ body::after{content:'';position:fixed;bottom:-30%;right:-15%;width:50%;height:70
 .pair-form button{display:flex;align-items:center;justify-content:center;gap:.5rem;padding:.85rem;border-radius:.6rem;border:none;background:linear-gradient(135deg,#2563eb,#7c3aed);color:#fff;font-size:.95rem;font-weight:600;cursor:pointer;transition:opacity .2s,transform .15s;font-family:inherit}
 .pair-form button:hover{opacity:.9}
 .pair-form button:active{transform:scale(.98)}
+.cc-examples{display:flex;flex-wrap:wrap;gap:.35rem;justify-content:center;margin-bottom:1rem}
+.cc-tag{display:inline-block;padding:.2rem .55rem;border-radius:.3rem;font-size:.7rem;font-weight:500;color:#888;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.06)}
+.input-hint{font-size:.75rem;color:#555;margin-top:-.25rem;margin-bottom:.25rem;text-align:left;padding-left:.25rem;transition:color .3s}
+.how-it-works{margin-top:1.25rem;padding-top:1rem;border-top:1px solid rgba(255,255,255,.06);text-align:left}
+.hw-title{font-size:.8rem;font-weight:600;color:#888;text-transform:uppercase;letter-spacing:1px;margin-bottom:.65rem}
+.hw-steps{display:flex;flex-direction:column;gap:.45rem}
+.hw-step{display:flex;align-items:flex-start;gap:.6rem;font-size:.8rem;color:#888;line-height:1.5}
+.hw-step strong{color:#ccc}
+.hw-num{flex-shrink:0;width:20px;height:20px;border-radius:50%;background:rgba(139,92,246,.1);border:1px solid rgba(139,92,246,.2);color:#a78bfa;font-size:.65rem;font-weight:700;display:flex;align-items:center;justify-content:center;margin-top:2px}
 .error-msg{display:flex;align-items:center;gap:.5rem;background:rgba(239,68,68,.08);color:#f87171;border:1px solid rgba(239,68,68,.15);padding:.6rem 1rem;border-radius:.5rem;margin-bottom:1rem;font-size:.82rem;text-align:left}
 .back-btn{display:inline-flex;align-items:center;gap:.45rem;margin-top:1.25rem;padding:.55rem 1.1rem;border-radius:.5rem;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);color:#888;font-size:.8rem;font-weight:500;text-decoration:none;transition:color .2s,border-color .2s,background .2s;cursor:pointer}
 .back-btn:hover{color:#ccc;border-color:rgba(255,255,255,.15);background:rgba(255,255,255,.06)}
@@ -753,7 +818,13 @@ const server = http.createServer((req, res) => {
     const url = new URL(req.url, `http://${req.headers.host}`)
 
     if (url.pathname === '/pair' && url.searchParams.get('phone')) {
-        const phone = url.searchParams.get('phone').replace(/[^0-9]/g, '')
+        let phone = url.searchParams.get('phone').replace(/[^0-9]/g, '')
+        if (phone.startsWith('0')) {
+            currentPairing.error = 'Do not start with 0. Use country code instead (e.g. 254 for Kenya, 234 for Nigeria, 1 for US).'
+            res.writeHead(302, { 'Location': '/' })
+            res.end()
+            return
+        }
         if (phone.length >= 10 && phone.length <= 15) {
             currentPairing = { phone: null, code: null, status: 'idle', error: '' }
             if (activeSessions.has(phone) && activeSessions.get(phone).status === 'connected') {
