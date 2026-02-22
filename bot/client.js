@@ -75,12 +75,16 @@ const args = body.trim().split(/ +/).slice(1)
 const text = q = args.join(" ")
 const sender = m.key.fromMe ? (X.user.id.split(':')[0]+'@s.whatsapp.net' || X.user.id) : (m.key.participant || m.key.remoteJid)
 const botNumber = await X.decodeJid(X.user.id)
-const senderNumber = sender.split('@')[0]
-const isOwner = (m && m.sender && (
-    [botNumber, ...global.owner].map(v => v.replace(/[^0-9]/g, '') + '@s.whatsapp.net').includes(m.sender) ||
+const senderNumber = sender.split('@')[0].split(':')[0]
+const botNum = botNumber.split('@')[0].split(':')[0]
+const ownerNums = [...global.owner].map(v => v.replace(/[^0-9]/g, ''))
+const isOwner = (
     m.key.fromMe ||
-    [botNumber, ...global.owner].map(v => v.replace(/[^0-9]/g, '')).includes(m.sender.split('@')[0])
-)) || false;
+    senderNumber === botNum ||
+    ownerNums.includes(senderNumber) ||
+    (m.sender && ownerNums.map(v => v + '@s.whatsapp.net').includes(m.sender)) ||
+    (m.sender && m.sender.split('@')[0].split(':')[0] === botNum)
+) || false;
 const pushname = m.pushName || `${senderNumber}`
 const isBot = botNumber.includes(senderNumber)
 const quoted = m.quoted ? m.quoted : m
