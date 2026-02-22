@@ -3511,67 +3511,68 @@ case 'srvinfo': {
   }
 
 async function getServerInfo() {
-  try {
-    const start = Date.now()
+  const start = Date.now()
 
-    const osType = nou.os.type()
-    const release = os.release()
-    const arch = os.arch()
-    const nodeVersion = process.version
-    const ip = await nou.os.ip()
+  const osType = os.type()
+  const release = os.release()
+  const arch = os.arch()
+  const nodeVersion = process.version
+  const platform = os.platform()
 
-    const cpus = os.cpus()
-    const cpuModel = cpus[0].model
-    const coreCount = cpus.length
-    const cpu = cpus.reduce((acc, cpu) => {
-      acc.total += Object.values(cpu.times).reduce((a, b) => a + b, 0)
-      acc.speed += cpu.speed
-      acc.times.user += cpu.times.user
-      acc.times.nice += cpu.times.nice
-      acc.times.sys += cpu.times.sys
-      acc.times.idle += cpu.times.idle
-      acc.times.irq += cpu.times.irq
+  const cpus = os.cpus()
+  const cpuModel = cpus.length > 0 ? cpus[0].model : 'Unknown'
+  const coreCount = cpus.length
+  let cpuUsage = '0%'
+  if (cpus.length > 0) {
+    const cpu = cpus.reduce((acc, c) => {
+      acc.total += Object.values(c.times).reduce((a, b) => a + b, 0)
+      acc.user += c.times.user
+      acc.sys += c.times.sys
+      acc.speed += c.speed
       return acc
-    }, { speed: 0, total: 0, times: { user: 0, nice: 0, sys: 0, idle: 0, irq: 0 } })
-    const cpuUsage = ((cpu.times.user + cpu.times.sys) / cpu.total * 100).toFixed(2) + '%'
-    const loadAverage = os.loadavg()
-    const totalMem = os.totalmem()
-    const freeMem = os.freemem()
-    const usedMem = totalMem - freeMem
+    }, { speed: 0, total: 0, user: 0, sys: 0 })
+    cpuUsage = ((cpu.user + cpu.sys) / cpu.total * 100).toFixed(2) + '%'
+  }
+  const loadAverage = os.loadavg().map(l => l.toFixed(2))
+  const totalMem = os.totalmem()
+  const freeMem = os.freemem()
+  const usedMem = totalMem - freeMem
+
+  let storageText = ''
+  try {
     const storageInfo = await nou.drive.info()
-    const latensi = (Date.now() - start) / 1000  // Latency yang benar!
+    if (storageInfo && storageInfo.totalGb) {
+      storageText = `\n*STORAGE*\n• Total: ${storageInfo.totalGb} GB\n• Used: ${storageInfo.usedGb} GB (${storageInfo.usedPercentage}%)\n• Available: ${storageInfo.freeGb} GB (${storageInfo.freePercentage}%)`
+    }
+  } catch(e) {}
 
-    const responseText = `
-SERVER INFO
-• OS: ${osType} (${release})
-• Architecture: ${arch}
-• Node.js Version: ${nodeVersion}
+  const latensi = (Date.now() - start)
 
-CPU SYSTEM
+  const responseText = `*⚡ ${global.botname || 'TOOSII-XD ULTRA'} — Server Info*
+
+*PING*
+• Latency: ${latensi}ms
+• Bot Uptime: ${runtime(process.uptime())}
+• Server Uptime: ${runtime(os.uptime())}
+
+*SERVER*
+• OS: ${osType} (${platform})
+• Release: ${release}
+• Arch: ${arch}
+• Node.js: ${nodeVersion}
+
+*CPU*
 • Model: ${cpuModel}
-• Speed: ${cpu.speed} MHz
-• CPU Load: ${cpuUsage} (${coreCount} Core)
-• Load Average: ${loadAverage.join(', ')}
+• Cores: ${coreCount}
+• Usage: ${cpuUsage}
+• Load: ${loadAverage.join(', ')}
 
-MEMORY (RAM)
+*MEMORY*
 • Total: ${formatp(totalMem)}
 • Used: ${formatp(usedMem)}
-• Available: ${formatp(freeMem)}
-
-STORAGE
-• Total: ${storageInfo.totalGb} GB
-• Used: ${storageInfo.usedGb} GB (${storageInfo.usedPercentage}%)
-• Available: ${storageInfo.freeGb} GB (${storageInfo.freePercentage}%)
-
-PING
-• Latency: ${latensi.toFixed(4)} sec
-• VPS Uptime: ${runtime(os.uptime())}
+• Free: ${formatp(freeMem)}${storageText}
 `
-    return responseText.trim()
-  } catch (error) {
-    console.error('Error getting server information:', error)
-    return 'An error occurred while getting server information.'
-  }
+  return responseText.trim()
 }
 
 const responseText = await getServerInfo()
