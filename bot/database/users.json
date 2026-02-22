@@ -367,11 +367,12 @@
   "130688003084487@lid": {
     "name": "Silent Wolf",
     "firstSeen": "2026-02-22T11:37:13.157Z",
-    "lastSeen": "2026-02-22T11:37:47.569Z",
-    "commandCount": 2,
+    "lastSeen": "2026-02-22T11:44:47.639Z",
+    "commandCount": 3,
     "commands": {
       "listonline": 1,
-      "listinactive": 1
+      "listinactive": 1,
+      "tiktok": 1
     }
   }
 }
