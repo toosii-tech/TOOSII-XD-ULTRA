@@ -4099,19 +4099,60 @@ case 'ytv': {
 if (!text) return reply(`Example: ${prefix}${command} [youtube url or search query]`)
 reply(global.mess.wait)
 try {
-let yts = require('yt-search')
 let url = text
+let title = text
 if (!text.match(/youtu/gi)) {
 let search = await yts(text)
 if (!search.all.length) return reply('No results found.')
 url = search.all[0].url
+title = search.all[0].title
 }
-let ytdl = require('@distube/ytdl-core')
-let info = await ytdl.getInfo(url)
-let title = info.videoDetails.title
-let format = ytdl.chooseFormat(info.formats, { quality: 'highest', filter: 'videoandaudio' })
-if (!format) return reply('No video format available.')
-await X.sendMessage(m.chat, { video: { url: format.url }, caption: `*${title}*\n\n${global.packname}`, mimetype: 'video/mp4' }, { quoted: m })
+let downloaded = false
+let videoBuffer = null
+try {
+let initRes = await fetch(`https://loader.to/ajax/download.php?format=mp4&url=${encodeURIComponent(url)}`)
+let initData = await initRes.json()
+if (initData.success && initData.id) {
+    let attempts = 0
+    while (attempts < 40) {
+        await new Promise(r => setTimeout(r, 3000))
+        let progRes = await fetch(`https://loader.to/ajax/progress.php?id=${initData.id}`)
+        let progData = await progRes.json()
+        if (progData.success === 1 && progData.progress >= 1000 && progData.download_url) {
+            videoBuffer = await getBuffer(progData.download_url)
+            if (videoBuffer && videoBuffer.length > 10000) downloaded = true
+            break
+        }
+        if (progData.progress < 0) break
+        attempts++
+    }
+}
+} catch (e1) { console.log('loader.to video failed:', e1.message) }
+if (!downloaded) {
+    try {
+        let ytdl = require('@distube/ytdl-core')
+        let info = await ytdl.getInfo(url)
+        title = info.videoDetails.title
+        let format = ytdl.chooseFormat(info.formats, { quality: 'highest', filter: 'videoandaudio' })
+        if (format) {
+            let chunks = []
+            await new Promise((resolve, reject) => {
+                let stream = ytdl(url, { format })
+                stream.on('data', c => chunks.push(c))
+                stream.on('end', resolve)
+                stream.on('error', reject)
+                setTimeout(() => { stream.destroy(); reject(new Error('timeout')) }, 180000)
+            })
+            videoBuffer = Buffer.concat(chunks)
+            if (videoBuffer.length > 10000) downloaded = true
+        }
+    } catch (e2) { console.log('ytdl-core video failed:', e2.message) }
+}
+if (downloaded && videoBuffer) {
+    await X.sendMessage(m.chat, { video: videoBuffer, caption: `*${title}*\n\n${global.packname}`, mimetype: 'video/mp4' }, { quoted: m })
+} else {
+    reply('⚠️ Video download failed. Please try again later.')
+}
 } catch(e) { reply('Error: ' + e.message) }
 } break
 
@@ -4119,15 +4160,56 @@ case 'ytdocplay': {
 if (!text) return reply(`Example: ${prefix}ytdocplay [search query]`)
 reply(global.mess.wait)
 try {
-let yts = require('yt-search')
 let search = await yts(text)
 if (!search.all.length) return reply('No results found.')
-let vid = search.all[0]
-let ytdl = require('@distube/ytdl-core')
-let info = await ytdl.getInfo(vid.url)
-let format = ytdl.chooseFormat(info.formats, { quality: 'highestaudio' })
-if (!format) return reply('No audio format available.')
-await X.sendMessage(m.chat, { document: { url: format.url }, mimetype: 'audio/mpeg', fileName: `${vid.title}.mp3` }, { quoted: m })
+let vid = search.all.find(v => v.type === 'video') || search.all[0]
+let downloaded = false
+let audioBuffer = null
+try {
+let initRes = await fetch(`https://loader.to/ajax/download.php?format=mp3&url=${encodeURIComponent(vid.url)}`)
+let initData = await initRes.json()
+if (initData.success && initData.id) {
+    let attempts = 0
+    while (attempts < 30) {
+        await new Promise(r => setTimeout(r, 3000))
+        let progRes = await fetch(`https://loader.to/ajax/progress.php?id=${initData.id}`)
+        let progData = await progRes.json()
+        if (progData.success === 1 && progData.progress >= 1000 && progData.download_url) {
+            audioBuffer = await getBuffer(progData.download_url)
+            if (audioBuffer && audioBuffer.length > 10000) downloaded = true
+            break
+        }
+        if (progData.progress < 0) break
+        attempts++
+    }
+}
+} catch (e1) { console.log('loader.to ytdocplay failed:', e1.message) }
+if (!downloaded) {
+    try {
+        let ytdl = require('@distube/ytdl-core')
+        let info = await ytdl.getInfo(vid.url)
+        let format = ytdl.chooseFormat(info.formats, { quality: 'highestaudio', filter: 'audioonly' })
+        if (!format) format = ytdl.chooseFormat(info.formats, { filter: f => f.hasAudio })
+        if (format) {
+            let chunks = []
+            await new Promise((resolve, reject) => {
+                let stream = ytdl(vid.url, { format })
+                stream.on('data', c => chunks.push(c))
+                stream.on('end', resolve)
+                stream.on('error', reject)
+                setTimeout(() => { stream.destroy(); reject(new Error('timeout')) }, 120000)
+            })
+            audioBuffer = Buffer.concat(chunks)
+            if (audioBuffer.length > 10000) downloaded = true
+        }
+    } catch (e2) { console.log('ytdl-core ytdocplay failed:', e2.message) }
+}
+if (downloaded && audioBuffer) {
+    let cleanName = `${vid.author?.name || 'Unknown'} - ${vid.title}.mp3`.replace(/[<>:"/\\|?*]/g, '')
+    await X.sendMessage(m.chat, { document: audioBuffer, mimetype: 'audio/mpeg', fileName: cleanName }, { quoted: m })
+} else {
+    reply('⚠️ Audio download failed. Please try again later.')
+}
 } catch(e) { reply('Error: ' + e.message) }
 } break
 
@@ -4135,15 +4217,55 @@ case 'ytdocvideo': {
 if (!text) return reply(`Example: ${prefix}ytdocvideo [search query]`)
 reply(global.mess.wait)
 try {
-let yts = require('yt-search')
 let search = await yts(text)
 if (!search.all.length) return reply('No results found.')
-let vid = search.all[0]
-let ytdl = require('@distube/ytdl-core')
-let info = await ytdl.getInfo(vid.url)
-let format = ytdl.chooseFormat(info.formats, { quality: 'highest', filter: 'videoandaudio' })
-if (!format) return reply('No video format available.')
-await X.sendMessage(m.chat, { document: { url: format.url }, mimetype: 'video/mp4', fileName: `${vid.title}.mp4` }, { quoted: m })
+let vid = search.all.find(v => v.type === 'video') || search.all[0]
+let downloaded = false
+let videoBuffer = null
+try {
+let initRes = await fetch(`https://loader.to/ajax/download.php?format=mp4&url=${encodeURIComponent(vid.url)}`)
+let initData = await initRes.json()
+if (initData.success && initData.id) {
+    let attempts = 0
+    while (attempts < 40) {
+        await new Promise(r => setTimeout(r, 3000))
+        let progRes = await fetch(`https://loader.to/ajax/progress.php?id=${initData.id}`)
+        let progData = await progRes.json()
+        if (progData.success === 1 && progData.progress >= 1000 && progData.download_url) {
+            videoBuffer = await getBuffer(progData.download_url)
+            if (videoBuffer && videoBuffer.length > 10000) downloaded = true
+            break
+        }
+        if (progData.progress < 0) break
+        attempts++
+    }
+}
+} catch (e1) { console.log('loader.to ytdocvideo failed:', e1.message) }
+if (!downloaded) {
+    try {
+        let ytdl = require('@distube/ytdl-core')
+        let info = await ytdl.getInfo(vid.url)
+        let format = ytdl.chooseFormat(info.formats, { quality: 'highest', filter: 'videoandaudio' })
+        if (format) {
+            let chunks = []
+            await new Promise((resolve, reject) => {
+                let stream = ytdl(vid.url, { format })
+                stream.on('data', c => chunks.push(c))
+                stream.on('end', resolve)
+                stream.on('error', reject)
+                setTimeout(() => { stream.destroy(); reject(new Error('timeout')) }, 180000)
+            })
+            videoBuffer = Buffer.concat(chunks)
+            if (videoBuffer.length > 10000) downloaded = true
+        }
+    } catch (e2) { console.log('ytdl-core ytdocvideo failed:', e2.message) }
+}
+if (downloaded && videoBuffer) {
+    let cleanName = `${vid.title}.mp4`.replace(/[<>:"/\\|?*]/g, '')
+    await X.sendMessage(m.chat, { document: videoBuffer, mimetype: 'video/mp4', fileName: cleanName }, { quoted: m })
+} else {
+    reply('⚠️ Video download failed. Please try again later.')
+}
 } catch(e) { reply('Error: ' + e.message) }
 } break
 
@@ -4151,20 +4273,18 @@ case 'spotify': {
 if (!text) return reply(`Example: ${prefix}spotify [song name]`)
 reply(global.mess.wait)
 try {
-let res = await fetch(`https://api.spotify.com/v1/search?q=${encodeURIComponent(text)}&type=track&limit=5`, { headers: { 'Authorization': 'Bearer ' + (process.env.SPOTIFY_TOKEN || '') } })
-if (!res.ok) {
-let yts = require('yt-search')
-let search = await yts(text + ' audio')
+let search = await yts(text)
 if (!search.all.length) return reply('No results found.')
-let result = search.all.slice(0, 5).map((v, i) => `${i+1}. *${v.title}*\nDuration: ${v.timestamp}\nURL: ${v.url}`).join('\n\n')
-reply(`*Spotify Search Results:*\n\n${result}\n\nUse ${prefix}play [url] to download`)
-} else {
-let data = await res.json()
-let tracks = data.tracks?.items || []
-if (!tracks.length) return reply('No results found.')
-let result = tracks.map((t, i) => `${i+1}. *${t.name}* by ${t.artists.map(a => a.name).join(', ')}\nAlbum: ${t.album.name}\nPreview: ${t.preview_url || 'N/A'}`).join('\n\n')
-reply(`*Spotify Search:*\n\n${result}`)
-}
+let results = search.all.filter(v => v.type === 'video').slice(0, 5)
+if (!results.length) return reply('No results found.')
+let songInfo = `🎵 *Spotify Search: ${text}*\n\n`
+results.forEach((v, i) => {
+    songInfo += `*${i+1}.* ${v.title}\n`
+    songInfo += `   Artist: ${v.author?.name || 'Unknown'}\n`
+    songInfo += `   Duration: ${v.timestamp}\n\n`
+})
+songInfo += `_Use ${prefix}play [song name] to download as MP3_`
+reply(songInfo)
 } catch(e) { reply('Error: ' + e.message) }
 } break
 
