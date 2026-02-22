@@ -4900,21 +4900,42 @@ await X.sendMessage(m.chat, { image: { url: data.avatar_url }, caption: info }, 
 } break
 
 case 'repo': {
-if (!text) return reply(`Example: ${prefix}repo user/repo`)
 reply(global.mess.wait)
 try {
-let repoPath = text.includes('/') ? text : text + '/' + text
+let repoPath = text && text.includes('/') ? text : text ? text + '/' + text : 'TOOSII102/TOOSII-XD-ULTRA'
 let res = await fetch(`https://api.github.com/repos/${encodeURIComponent(repoPath)}`)
 let data = await res.json()
 if (data.message) return reply('Repository not found.')
-reply(`*GitHub Repo:*\n\n📦 ${data.full_name}\n📝 ${data.description || 'No description'}\n⭐ Stars: ${data.stargazers_count}\n🍴 Forks: ${data.forks_count}\n👁️ Watchers: ${data.watchers_count}\n💻 Language: ${data.language || 'N/A'}\n📅 Created: ${new Date(data.created_at).toLocaleDateString()}\n🔗 ${data.html_url}`)
+let repoInfo = `*📦 ${data.full_name}*\n\n`
+repoInfo += `📝 ${data.description || 'No description'}\n`
+repoInfo += `⭐ Stars: ${data.stargazers_count}\n`
+repoInfo += `🍴 Forks: ${data.forks_count}\n`
+repoInfo += `👁️ Watchers: ${data.watchers_count}\n`
+repoInfo += `💻 Language: ${data.language || 'N/A'}\n`
+repoInfo += `📅 Created: ${new Date(data.created_at).toLocaleDateString()}\n`
+repoInfo += `🔗 ${data.html_url}\n\n`
+repoInfo += `━━━━━━━━━━━━━━━━━━━━━\n\n`
+repoInfo += `⭐ *Star* the repo to show your support!\n`
+repoInfo += `🍴 *Fork* it to get your own copy and deploy your bot!\n\n`
+repoInfo += `👉 Fork: ${data.html_url}/fork\n`
+repoInfo += `⭐ Star: ${data.html_url}\n\n`
+repoInfo += `_Your support helps us keep building!_`
+reply(repoInfo)
 } catch(e) { reply('Error: ' + e.message) }
 } break
 
 case 'sc':
 case 'script':
 case 'source': {
-reply(`*${global.botname} Source Code*\n\nThis bot is a proprietary product of ${global.ownername}.\nContact: ${global.ownerNumber}\n\n© ${global.ownername} - All Rights Reserved`)
+let scText = `*${global.botname} Source Code*\n\n`
+scText += `🔗 *GitHub:* https://github.com/TOOSII102/TOOSII-XD-ULTRA\n\n`
+scText += `⭐ Don't forget to *Star* the repo!\n`
+scText += `🍴 *Fork* it to deploy your own bot!\n\n`
+scText += `👉 Fork: https://github.com/TOOSII102/TOOSII-XD-ULTRA/fork\n\n`
+scText += `Developer: ${global.ownername}\n`
+scText += `Contact: ${global.ownerNumber}\n\n`
+scText += `© ${global.ownername} - All Rights Reserved`
+reply(scText)
 } break
 
 case 'clone': {
