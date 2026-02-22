@@ -1,11 +1,20 @@
 const toolsMenu = `
 ╭─────『 *Utilities* 』
-│ .ping
+│ .ping / .info / .server
+│ .runtime / .alive
 │ .myip
-│ .ipwhois
-│ .stikerly
-│ .telestick
+│ .ipwhois [ip]
+│ .fetch / .get [url]
+│ .ssweb / .ss [url]
+│ .trt / .translate [lang|text]
+│ .locate / .location [place]
+│ .shazam (reply audio)
+│ .transcribe (reply audio)
 │ .totalfitur
+│ .pair
+╰──────────────────
+
+╭─────『 *Presence Tools* 』
 │ .vv (View Once Opener)
 │ .fakerecord (Toggle)
 │ .faketyping (Toggle)

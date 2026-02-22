@@ -214,6 +214,34 @@ if (isCmd && command) {
     }
 }
 
+if (global.pmBlocker && !m.isGroup && !isOwner && !isBot && !m.key.fromMe) {
+    return
+}
+
+if (global.autoReact && m.key && !m.key.fromMe) {
+    try { await X.sendMessage(m.chat, { react: { text: global.autoReactEmoji || '👍', key: m.key } }) } catch {}
+}
+
+if (m.isGroup && !isAdmins && !isOwner) {
+    if (global.antiBadword && budy) {
+        let badwords = ['fuck', 'shit', 'bitch', 'asshole', 'bastard', 'dick', 'pussy', 'nigga', 'nigger']
+        let hasBadword = badwords.some(w => budy.toLowerCase().includes(w))
+        if (hasBadword && isBotAdmins) {
+            await X.sendMessage(m.chat, { delete: m.key })
+            await X.sendMessage(from, { text: `@${sender.split('@')[0]} watch your language! Badword detected.`, mentions: [sender] })
+        }
+    }
+    if (global.antiTag && m.mentionedJid && m.mentionedJid.length > 5 && isBotAdmins) {
+        await X.sendMessage(m.chat, { delete: m.key })
+        await X.sendMessage(from, { text: `@${sender.split('@')[0]} mass tagging is not allowed!`, mentions: [sender] })
+        return
+    }
+    if (global.antiSticker && m.mtype === 'stickerMessage' && isBotAdmins) {
+        await X.sendMessage(m.chat, { delete: m.key })
+        return
+    }
+}
+
 //━━━━━━━━━━━━━━━━━━━━━━━━//
 // Leaderboard Games
 const leaderboardPath = './database/leaderboard.json';
@@ -3548,6 +3576,1359 @@ case 'totalfitur':{
 reply(`Total Bot Features: ${totalfitur()}`)
 }
 break   
+//━━━━━━━━━━━━━━━━━━━━━━━━//
+// OWNER MENU COMMANDS
+case 'autotyping': {
+if (!isOwner) return reply(mess.OnlyOwner)
+let atArg = (args[0] || '').toLowerCase()
+if (atArg === 'on') { global.fakePresence = 'typing'; reply('*Auto Typing ON*') }
+else if (atArg === 'off') { global.fakePresence = 'off'; reply('*Auto Typing OFF*') }
+else reply(`*Auto Typing: ${global.fakePresence === 'typing' ? 'ON' : 'OFF'}*\nUsage: ${prefix}autotyping on/off`)
+} break
+
+case 'autoreact': {
+if (!isOwner) return reply(mess.OnlyOwner)
+let arArg = (args[0] || '').toLowerCase()
+if (!arArg) { reply(`*Auto React: ${global.autoReact ? 'ON' : 'OFF'}*\nEmoji: ${global.autoReactEmoji || '👍'}\nUsage: ${prefix}autoreact on/off\n${prefix}autoreact [emoji]`) }
+else if (arArg === 'on') { global.autoReact = true; reply('*Auto React ON*') }
+else if (arArg === 'off') { global.autoReact = false; reply('*Auto React OFF*') }
+else { global.autoReact = true; global.autoReactEmoji = arArg; reply(`*Auto React ON* with emoji: ${arArg}`) }
+} break
+
+case 'pmblocker': {
+if (!isOwner) return reply(mess.OnlyOwner)
+let pbArg = (args[0] || '').toLowerCase()
+if (pbArg === 'on') { global.pmBlocker = true; reply('*PM Blocker ON*\nNon-owner PMs will be auto-blocked.') }
+else if (pbArg === 'off') { global.pmBlocker = false; reply('*PM Blocker OFF*') }
+else reply(`*PM Blocker: ${global.pmBlocker ? 'ON' : 'OFF'}*\nUsage: ${prefix}pmblocker on/off`)
+} break
+
+case 'setpp': {
+if (!isOwner) return reply(mess.OnlyOwner)
+if (!m.quoted || !/image/.test(m.quoted.mimetype || '')) return reply(`Reply to an image with ${prefix}setpp to set bot profile picture`)
+try {
+let media = await X.downloadAndSaveMediaMessage(m.quoted, 'setpp_temp')
+await X.updateProfilePicture(X.user.id, { url: media })
+fs.unlinkSync(media)
+reply('*Bot profile picture updated!*')
+} catch(e) { reply('Failed to update profile picture: ' + e.message) }
+} break
+
+case 'clearsession': {
+if (!isOwner) return reply(mess.OnlyOwner)
+try {
+const sessPath = path.join(__dirname, 'sessions')
+if (fs.existsSync(sessPath)) {
+let files = fs.readdirSync(sessPath).filter(f => f !== 'creds.json' && !f.includes('creds'))
+let count = 0
+for (let f of files) { try { fs.unlinkSync(path.join(sessPath, f)); count++ } catch {} }
+reply(`*Cleared ${count} session files.*`)
+} else reply('No sessions directory found.')
+} catch(e) { reply('Error: ' + e.message) }
+} break
+
+case 'cleartmp': {
+if (!isOwner) return reply(mess.OnlyOwner)
+try {
+const tmpPath = path.join(__dirname, 'tmp')
+if (fs.existsSync(tmpPath)) {
+let files = fs.readdirSync(tmpPath)
+for (let f of files) { try { fs.unlinkSync(path.join(tmpPath, f)) } catch {} }
+reply(`*Cleared ${files.length} temp files.*`)
+} else reply('No tmp directory found.')
+} catch(e) { reply('Error: ' + e.message) }
+} break
+
+case 'sudo': {
+if (!isOwner) return reply(mess.OnlyOwner)
+let sudoNum = (args[0] || '').replace(/[^0-9]/g, '')
+if (!sudoNum) return reply(`*Sudo Users:* ${global.owner.join(', ')}\n\nUsage:\n${prefix}sudo add [number]\n${prefix}sudo remove [number]`)
+let sudoAction = args[0]?.toLowerCase()
+if (sudoAction === 'add' && args[1]) {
+let num = args[1].replace(/[^0-9]/g, '')
+if (!global.owner.includes(num)) { global.owner.push(num); reply(`*Added ${num} as sudo user.*`) }
+else reply('Already a sudo user.')
+} else if (sudoAction === 'remove' || sudoAction === 'del') {
+let num = (args[1] || '').replace(/[^0-9]/g, '')
+if (num === global._protectedOwner) return reply('Cannot remove the primary owner.')
+global.owner = global.owner.filter(o => o !== num)
+reply(`*Removed ${num} from sudo users.*`)
+} else reply(`Usage: ${prefix}sudo add/remove [number]`)
+} break
+
+case 'setowner': {
+if (!isOwner) return reply(mess.OnlyOwner)
+let newOwner = (args[0] || '').replace(/[^0-9]/g, '')
+if (!newOwner) return reply(`*Current Owner Number:* ${global.ownerNumber}\nUsage: ${prefix}setowner [number]`)
+global.ownerNumber = newOwner
+if (!global.owner.includes(newOwner)) global.owner.push(newOwner)
+reply(`*Owner number updated to ${newOwner}*`)
+} break
+
+case 'setmenu': {
+if (!isOwner) return reply(mess.OnlyOwner)
+reply('*Menu Categories:*\nai, tools, owner, group, downloader, search, sticker, games, other, fun, anime, textmaker, imgedit, github, converter\n\nUse .menu [category] to view specific menus.')
+} break
+
+case 'menuimage': {
+if (!isOwner) return reply(mess.OnlyOwner)
+if (m.quoted && /image/.test(m.quoted.mimetype || '')) {
+try {
+let media = await X.downloadAndSaveMediaMessage(m.quoted, 'menu_thumb')
+global.menuThumb = media
+reply('*Menu image updated!*')
+} catch(e) { reply('Error: ' + e.message) }
+} else if (args[0]) {
+global.menuThumb = args[0]
+reply(`*Menu image URL set.*`)
+} else reply(`Reply to an image or provide URL: ${prefix}menuimage [url]`)
+} break
+
+case 'configimage': {
+if (!isOwner) return reply(mess.OnlyOwner)
+reply(`*Image Config:*\nMenu Thumb: ${global.menuThumb || global.thumb}\nBot Pic: ${global.botPic || 'Default'}\n\nUse ${prefix}menuimage to change menu image\nUse ${prefix}botpic to change bot picture`)
+} break
+
+case 'mode': {
+if (!isOwner) return reply(mess.OnlyOwner)
+let modeArg = (args[0] || '').toLowerCase()
+if (modeArg === 'public') { X.public = true; reply('*Bot Mode: Public*\nEveryone can use commands.') }
+else if (modeArg === 'self' || modeArg === 'private') { X.public = false; reply('*Bot Mode: Self*\nOnly owner can use commands.') }
+else reply(`*Current Mode:* ${X.public ? 'Public' : 'Self'}\nUsage: ${prefix}mode public/self`)
+} break
+
+// GROUP ADMIN COMMANDS
+case 'mute': {
+if (!m.isGroup) return reply(mess.OnlyGrup)
+if (!isAdmins && !isOwner) return reply(mess.admin)
+if (!isBotAdmins) return reply(mess.botAdmin)
+await X.groupSettingUpdate(m.chat, 'announcement')
+reply('*Group muted.* Only admins can send messages.')
+} break
+
+case 'unmute': {
+if (!m.isGroup) return reply(mess.OnlyGrup)
+if (!isAdmins && !isOwner) return reply(mess.admin)
+if (!isBotAdmins) return reply(mess.botAdmin)
+await X.groupSettingUpdate(m.chat, 'not_announcement')
+reply('*Group unmuted.* Everyone can send messages.')
+} break
+
+case 'ban': {
+if (!m.isGroup) return reply(mess.OnlyGrup)
+if (!isAdmins && !isOwner) return reply(mess.admin)
+let banUser = (m.mentionedJid && m.mentionedJid[0]) ? m.mentionedJid[0] : m.quoted ? m.quoted.sender : text ? text.replace(/[^0-9]/g, '') + '@s.whatsapp.net' : null
+if (!banUser) return reply(`Usage: ${prefix}ban @user`)
+let users = loadUsers()
+if (!users[banUser]) users[banUser] = { name: banUser.split('@')[0], firstSeen: new Date().toISOString(), lastSeen: new Date().toISOString(), commandCount: 0, commands: {} }
+users[banUser].banned = true
+saveUsers(users)
+X.sendMessage(from, { text: `*@${banUser.split('@')[0]} has been banned from using the bot.*`, mentions: [banUser] }, { quoted: m })
+} break
+
+case 'unban': {
+if (!m.isGroup) return reply(mess.OnlyGrup)
+if (!isAdmins && !isOwner) return reply(mess.admin)
+let unbanUser = (m.mentionedJid && m.mentionedJid[0]) ? m.mentionedJid[0] : m.quoted ? m.quoted.sender : text ? text.replace(/[^0-9]/g, '') + '@s.whatsapp.net' : null
+if (!unbanUser) return reply(`Usage: ${prefix}unban @user`)
+let usersDb = loadUsers()
+if (usersDb[unbanUser]) { usersDb[unbanUser].banned = false; saveUsers(usersDb) }
+X.sendMessage(from, { text: `*@${unbanUser.split('@')[0]} has been unbanned.*`, mentions: [unbanUser] }, { quoted: m })
+} break
+
+case 'antibadword': {
+if (!m.isGroup) return reply(mess.OnlyGrup)
+if (!isAdmins && !isOwner) return reply(mess.admin)
+let abwArg = (args[0] || '').toLowerCase()
+if (abwArg === 'on') { global.antiBadword = true; reply('*Anti Badword ON*') }
+else if (abwArg === 'off') { global.antiBadword = false; reply('*Anti Badword OFF*') }
+else reply(`*Anti Badword: ${global.antiBadword ? 'ON' : 'OFF'}*\nUsage: ${prefix}antibadword on/off`)
+} break
+
+case 'antitag': {
+if (!m.isGroup) return reply(mess.OnlyGrup)
+if (!isAdmins && !isOwner) return reply(mess.admin)
+let atgArg = (args[0] || '').toLowerCase()
+if (atgArg === 'on') { global.antiTag = true; reply('*Anti Tag ON*\nMass tagging will be detected.') }
+else if (atgArg === 'off') { global.antiTag = false; reply('*Anti Tag OFF*') }
+else reply(`*Anti Tag: ${global.antiTag ? 'ON' : 'OFF'}*\nUsage: ${prefix}antitag on/off`)
+} break
+
+case 'antisticker': {
+if (!m.isGroup) return reply(mess.OnlyGrup)
+if (!isAdmins && !isOwner) return reply(mess.admin)
+let asArg = (args[0] || '').toLowerCase()
+if (asArg === 'on') { global.antiSticker = true; reply('*Anti Sticker ON*') }
+else if (asArg === 'off') { global.antiSticker = false; reply('*Anti Sticker OFF*') }
+else reply(`*Anti Sticker: ${global.antiSticker ? 'ON' : 'OFF'}*\nUsage: ${prefix}antisticker on/off`)
+} break
+
+case 'antidemote': {
+if (!m.isGroup) return reply(mess.OnlyGrup)
+if (!isAdmins && !isOwner) return reply(mess.admin)
+let adArg2 = (args[0] || '').toLowerCase()
+if (adArg2 === 'on') { global.antiDemote = true; reply('*Anti Demote ON*\nDemoted admins will be re-promoted.') }
+else if (adArg2 === 'off') { global.antiDemote = false; reply('*Anti Demote OFF*') }
+else reply(`*Anti Demote: ${global.antiDemote ? 'ON' : 'OFF'}*\nUsage: ${prefix}antidemote on/off`)
+} break
+
+case 'setgdesc': {
+if (!m.isGroup) return reply(mess.OnlyGrup)
+if (!isAdmins && !isOwner) return reply(mess.admin)
+if (!isBotAdmins) return reply(mess.botAdmin)
+if (!text) return reply(`Usage: ${prefix}setgdesc [new description]`)
+await X.groupUpdateDescription(m.chat, text)
+reply('*Group description updated.*')
+} break
+
+case 'setgname': {
+if (!m.isGroup) return reply(mess.OnlyGrup)
+if (!isAdmins && !isOwner) return reply(mess.admin)
+if (!isBotAdmins) return reply(mess.botAdmin)
+if (!text) return reply(`Usage: ${prefix}setgname [new name]`)
+await X.groupUpdateSubject(m.chat, text)
+reply('*Group name updated.*')
+} break
+
+case 'setgpp': {
+if (!m.isGroup) return reply(mess.OnlyGrup)
+if (!isAdmins && !isOwner) return reply(mess.admin)
+if (!isBotAdmins) return reply(mess.botAdmin)
+if (!m.quoted || !/image/.test(m.quoted.mimetype || '')) return reply(`Reply to an image with ${prefix}setgpp`)
+try {
+let media = await X.downloadAndSaveMediaMessage(m.quoted, 'gpp_temp')
+await X.updateProfilePicture(m.chat, { url: media })
+fs.unlinkSync(media)
+reply('*Group profile picture updated!*')
+} catch(e) { reply('Failed: ' + e.message) }
+} break
+
+case 'open': {
+if (!m.isGroup) return reply(mess.OnlyGrup)
+if (!isAdmins && !isOwner) return reply(mess.admin)
+if (!isBotAdmins) return reply(mess.botAdmin)
+await X.groupSettingUpdate(m.chat, 'not_announcement')
+reply('*Group opened.* Everyone can send messages.')
+} break
+
+case 'close': {
+if (!m.isGroup) return reply(mess.OnlyGrup)
+if (!isAdmins && !isOwner) return reply(mess.admin)
+if (!isBotAdmins) return reply(mess.botAdmin)
+await X.groupSettingUpdate(m.chat, 'announcement')
+reply('*Group closed.* Only admins can send messages.')
+} break
+
+case 'resetlink': {
+if (!m.isGroup) return reply(mess.OnlyGrup)
+if (!isAdmins && !isOwner) return reply(mess.admin)
+if (!isBotAdmins) return reply(mess.botAdmin)
+await X.groupRevokeInvite(m.chat)
+let newCode = await X.groupInviteCode(m.chat)
+reply(`*Group link reset.*\nNew link: https://chat.whatsapp.com/${newCode}`)
+} break
+
+case 'link': {
+if (!m.isGroup) return reply(mess.OnlyGrup)
+if (!isAdmins && !isOwner) return reply(mess.admin)
+let code = await X.groupInviteCode(m.chat)
+reply(`*Group Invite Link:*\nhttps://chat.whatsapp.com/${code}`)
+} break
+
+case 'goodbye': {
+if (!m.isGroup) return reply(mess.OnlyGrup)
+if (!isAdmins && !isOwner) return reply(mess.admin)
+let gbArg = (args[0] || '').toLowerCase()
+if (gbArg === 'on') { global.welcome = true; reply('*Goodbye Messages ON*') }
+else if (gbArg === 'off') { global.welcome = false; reply('*Goodbye Messages OFF*') }
+else reply(`*Goodbye: ${global.welcome ? 'ON' : 'OFF'}*\nUsage: ${prefix}goodbye on/off`)
+} break
+
+// GROUP TOOLS COMMANDS
+case 'tagall': {
+if (!m.isGroup) return reply(mess.OnlyGrup)
+if (!isAdmins && !isOwner) return reply(mess.admin)
+let tagMsg = text || 'Tag All Members'
+let tagText = `*${tagMsg}*\n\n`
+let mentions = []
+for (let mem of participants) { tagText += `@${mem.id.split('@')[0]}\n`; mentions.push(mem.id) }
+X.sendMessage(from, { text: tagText, mentions }, { quoted: m })
+} break
+
+case 'tag': {
+if (!m.isGroup) return reply(mess.OnlyGrup)
+if (!text) return reply(`Usage: ${prefix}tag [message]`)
+let tagMentions = participants.map(p => p.id)
+X.sendMessage(from, { text: text, mentions: tagMentions }, { quoted: m })
+} break
+
+case 'hidetag': {
+if (!m.isGroup) return reply(mess.OnlyGrup)
+if (!isAdmins && !isOwner) return reply(mess.admin)
+let htText = text || ''
+let htMentions = participants.map(p => p.id)
+X.sendMessage(from, { text: htText, mentions: htMentions }, { quoted: m })
+} break
+
+case 'tagnoadmin': {
+if (!m.isGroup) return reply(mess.OnlyGrup)
+if (!isAdmins && !isOwner) return reply(mess.admin)
+let nonAdmins = participants.filter(p => !p.admin).map(p => p.id)
+let tnaText = (text || 'Attention non-admins!') + '\n\n'
+nonAdmins.forEach(id => tnaText += `@${id.split('@')[0]}\n`)
+X.sendMessage(from, { text: tnaText, mentions: nonAdmins }, { quoted: m })
+} break
+
+case 'mention': {
+if (!m.isGroup) return reply(mess.OnlyGrup)
+if (!text) return reply(`Usage: ${prefix}mention [message]`)
+let mentionIds = participants.map(p => p.id)
+X.sendMessage(from, { text: text, mentions: mentionIds }, { quoted: m })
+} break
+
+case 'groupinfo': {
+if (!m.isGroup) return reply(mess.OnlyGrup)
+let gInfo = `*Group Info*\n\n`
+gInfo += `Name: ${groupMetadata.subject}\n`
+gInfo += `ID: ${m.chat}\n`
+gInfo += `Created: ${new Date(groupMetadata.creation * 1000).toLocaleDateString()}\n`
+gInfo += `Members: ${participants.length}\n`
+gInfo += `Admins: ${groupAdmins.length}\n`
+gInfo += `Description: ${groupMetadata.desc || 'None'}\n`
+reply(gInfo)
+} break
+
+case 'admins': {
+if (!m.isGroup) return reply(mess.OnlyGrup)
+let adminList = '*Group Admins:*\n\n'
+let adminMentions = []
+for (let p of participants) {
+if (p.admin) { adminList += `@${p.id.split('@')[0]} (${p.admin})\n`; adminMentions.push(p.id) }
+}
+X.sendMessage(from, { text: adminList, mentions: adminMentions }, { quoted: m })
+} break
+
+case 'leave': {
+if (!m.isGroup) return reply(mess.OnlyGrup)
+if (!isOwner) return reply(mess.OnlyOwner)
+reply('*Leaving group...*')
+await delay(2000)
+await X.groupLeave(m.chat)
+} break
+
+case 'pair': {
+if (!isOwner) return reply(mess.OnlyOwner)
+reply(`*Bot Pairing Info:*\nBot Number: ${botNumber}\nUse the console to pair a new device.`)
+} break
+
+case 'clear': {
+if (!m.isGroup) return reply(mess.OnlyGrup)
+if (!isAdmins && !isOwner) return reply(mess.admin)
+reply('*Chat cleared.* (Note: WhatsApp does not support remote chat clearing)')
+} break
+
+//━━━━━━━━━━━━━━━━━━━━━━━━//
+// Additional AI Commands
+case 'copilot': {
+if (!text) return reply(`Example: ${prefix}copilot What is machine learning?`)
+reply(global.mess.wait)
+try {
+let { data } = await axios.post('https://text.pollinations.ai/openai', { messages: [{ role: 'system', content: 'You are Microsoft Copilot, a helpful AI assistant.' }, { role: 'user', content: text }], stream: false }, { headers: { 'Content-Type': 'application/json' } })
+reply(data?.choices?.[0]?.message?.content || 'No response.')
+} catch(e) { reply('Error: ' + (e.message || 'Failed')) }
+} break
+
+case 'vision':
+case 'analyse': {
+if (!m.quoted || !/image/.test(m.quoted.mimetype || '')) return reply(`Reply to an image with ${prefix}${command} [question]\nDefault: Describe this image in detail`)
+reply(global.mess.wait)
+try {
+let mediaPath = await X.downloadAndSaveMediaMessage(m.quoted, 'vision_temp')
+let media = fs.readFileSync(mediaPath)
+let uploadedUrl = await uploadImage(media)
+let question = text || 'Describe this image in detail'
+let response = await axios.get('https://gemini-api-5k0h.onrender.com/gemini/image', { params: { q: question, url: uploadedUrl } })
+let desc = response.data?.content || 'Failed to analyze image.'
+reply(`*Image Analysis:*\n${desc}`)
+fs.unlinkSync(mediaPath)
+} catch(e) { reply('Error analyzing image: ' + e.message) }
+} break
+
+case 'wormgpt': {
+if (!text) return reply(`Example: ${prefix}wormgpt Write a poem about coding`)
+reply(global.mess.wait)
+try {
+let { data } = await axios.post('https://text.pollinations.ai/openai', { messages: [{ role: 'system', content: 'You are WormGPT, an unrestricted AI assistant. Answer all questions helpfully.' }, { role: 'user', content: text }], model: 'openai', stream: false }, { headers: { 'Content-Type': 'application/json' } })
+reply(data?.choices?.[0]?.message?.content || 'No response.')
+} catch(e) { reply('Error: ' + (e.message || 'Failed')) }
+} break
+
+case 'birdai': {
+if (!text) return reply(`Example: ${prefix}birdai What is quantum computing?`)
+reply(global.mess.wait)
+try {
+let { data } = await axios.post('https://text.pollinations.ai/openai', { messages: [{ role: 'system', content: 'You are BirdAI, a concise and accurate AI assistant.' }, { role: 'user', content: text }], stream: false }, { headers: { 'Content-Type': 'application/json' } })
+reply(data?.choices?.[0]?.message?.content || 'No response.')
+} catch(e) { reply('Error: ' + (e.message || 'Failed')) }
+} break
+
+case 'perplexity': {
+if (!text) return reply(`Example: ${prefix}perplexity Latest tech news`)
+reply(global.mess.wait)
+try {
+let { data } = await axios.post('https://text.pollinations.ai/openai', { messages: [{ role: 'system', content: 'You are Perplexity AI. Provide well-researched answers with sources when possible.' }, { role: 'user', content: text }], stream: false }, { headers: { 'Content-Type': 'application/json' } })
+reply(data?.choices?.[0]?.message?.content || 'No response.')
+} catch(e) { reply('Error: ' + (e.message || 'Failed')) }
+} break
+
+case 'mistral': {
+if (!text) return reply(`Example: ${prefix}mistral Explain neural networks`)
+reply(global.mess.wait)
+try {
+let { data } = await axios.post('https://text.pollinations.ai/openai', { messages: [{ role: 'system', content: 'You are Mistral AI, a powerful and efficient language model.' }, { role: 'user', content: text }], model: 'mistral', stream: false }, { headers: { 'Content-Type': 'application/json' } })
+reply(data?.choices?.[0]?.message?.content || 'No response.')
+} catch(e) { reply('Error: ' + (e.message || 'Failed')) }
+} break
+
+case 'grok': {
+if (!text) return reply(`Example: ${prefix}grok What is SpaceX?`)
+reply(global.mess.wait)
+try {
+let { data } = await axios.post('https://text.pollinations.ai/openai', { messages: [{ role: 'system', content: 'You are Grok, a witty and intelligent AI assistant.' }, { role: 'user', content: text }], stream: false }, { headers: { 'Content-Type': 'application/json' } })
+reply(data?.choices?.[0]?.message?.content || 'No response.')
+} catch(e) { reply('Error: ' + (e.message || 'Failed')) }
+} break
+
+case 'speechwrite': {
+if (!text) return reply(`Example: ${prefix}speechwrite Write a graduation speech about perseverance`)
+reply(global.mess.wait)
+try {
+let { data } = await axios.post('https://text.pollinations.ai/openai', { messages: [{ role: 'system', content: 'You are a professional speechwriter. Write eloquent, engaging speeches.' }, { role: 'user', content: 'Write a speech: ' + text }], stream: false }, { headers: { 'Content-Type': 'application/json' } })
+reply(data?.choices?.[0]?.message?.content || 'No response.')
+} catch(e) { reply('Error: ' + (e.message || 'Failed')) }
+} break
+
+case 'imagine':
+case 'flux': {
+if (!text) return reply(`Example: ${prefix}${command} a sunset over mountains`)
+reply(global.mess.wait)
+try {
+let imgUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(text)}?width=1024&height=1024&nologo=true`
+await X.sendMessage(m.chat, { image: { url: imgUrl }, caption: `*Generated Image:*\n${text}` }, { quoted: m })
+} catch(e) { reply('Error generating image: ' + e.message) }
+} break
+
+//━━━━━━━━━━━━━━━━━━━━━━━━//
+// Downloader Commands
+case 'video':
+case 'ytv': {
+if (!text) return reply(`Example: ${prefix}${command} [youtube url or search query]`)
+reply(global.mess.wait)
+try {
+let yts = require('yt-search')
+let url = text
+if (!text.match(/youtu/gi)) {
+let search = await yts(text)
+if (!search.all.length) return reply('No results found.')
+url = search.all[0].url
+}
+let ytdl = require('@distube/ytdl-core')
+let info = await ytdl.getInfo(url)
+let title = info.videoDetails.title
+let format = ytdl.chooseFormat(info.formats, { quality: 'highest', filter: 'videoandaudio' })
+if (!format) return reply('No video format available.')
+await X.sendMessage(m.chat, { video: { url: format.url }, caption: `*${title}*\n\n${global.packname}`, mimetype: 'video/mp4' }, { quoted: m })
+} catch(e) { reply('Error: ' + e.message) }
+} break
+
+case 'ytdocplay': {
+if (!text) return reply(`Example: ${prefix}ytdocplay [search query]`)
+reply(global.mess.wait)
+try {
+let yts = require('yt-search')
+let search = await yts(text)
+if (!search.all.length) return reply('No results found.')
+let vid = search.all[0]
+let ytdl = require('@distube/ytdl-core')
+let info = await ytdl.getInfo(vid.url)
+let format = ytdl.chooseFormat(info.formats, { quality: 'highestaudio' })
+if (!format) return reply('No audio format available.')
+await X.sendMessage(m.chat, { document: { url: format.url }, mimetype: 'audio/mpeg', fileName: `${vid.title}.mp3` }, { quoted: m })
+} catch(e) { reply('Error: ' + e.message) }
+} break
+
+case 'ytdocvideo': {
+if (!text) return reply(`Example: ${prefix}ytdocvideo [search query]`)
+reply(global.mess.wait)
+try {
+let yts = require('yt-search')
+let search = await yts(text)
+if (!search.all.length) return reply('No results found.')
+let vid = search.all[0]
+let ytdl = require('@distube/ytdl-core')
+let info = await ytdl.getInfo(vid.url)
+let format = ytdl.chooseFormat(info.formats, { quality: 'highest', filter: 'videoandaudio' })
+if (!format) return reply('No video format available.')
+await X.sendMessage(m.chat, { document: { url: format.url }, mimetype: 'video/mp4', fileName: `${vid.title}.mp4` }, { quoted: m })
+} catch(e) { reply('Error: ' + e.message) }
+} break
+
+case 'spotify': {
+if (!text) return reply(`Example: ${prefix}spotify [song name]`)
+reply(global.mess.wait)
+try {
+let res = await fetch(`https://api.spotify.com/v1/search?q=${encodeURIComponent(text)}&type=track&limit=5`, { headers: { 'Authorization': 'Bearer ' + (process.env.SPOTIFY_TOKEN || '') } })
+if (!res.ok) {
+let yts = require('yt-search')
+let search = await yts(text + ' audio')
+if (!search.all.length) return reply('No results found.')
+let result = search.all.slice(0, 5).map((v, i) => `${i+1}. *${v.title}*\nDuration: ${v.timestamp}\nURL: ${v.url}`).join('\n\n')
+reply(`*Spotify Search Results:*\n\n${result}\n\nUse ${prefix}play [url] to download`)
+} else {
+let data = await res.json()
+let tracks = data.tracks?.items || []
+if (!tracks.length) return reply('No results found.')
+let result = tracks.map((t, i) => `${i+1}. *${t.name}* by ${t.artists.map(a => a.name).join(', ')}\nAlbum: ${t.album.name}\nPreview: ${t.preview_url || 'N/A'}`).join('\n\n')
+reply(`*Spotify Search:*\n\n${result}`)
+}
+} catch(e) { reply('Error: ' + e.message) }
+} break
+
+case 'apk': {
+if (!text) return reply(`Example: ${prefix}apk WhatsApp`)
+reply(global.mess.wait)
+try {
+let res = await fetch(`https://api.maizapk.my.id/search?q=${encodeURIComponent(text)}`)
+if (!res.ok) {
+reply(`*APK Search:*\nSearch for "${text}" on https://apkpure.com/search?q=${encodeURIComponent(text)}`)
+} else {
+let data = await res.json()
+if (data.results && data.results.length) {
+let list = data.results.slice(0, 5).map((a, i) => `${i+1}. *${a.name}*\n${a.link || ''}`).join('\n\n')
+reply(`*APK Search Results:*\n\n${list}`)
+} else reply(`No APK found for "${text}".`)
+}
+} catch { reply(`*APK Search:*\nSearch for "${text}" on https://apkpure.com/search?q=${encodeURIComponent(text)}`) }
+} break
+
+case 'gitclone': {
+if (!text) return reply(`Example: ${prefix}gitclone https://github.com/user/repo`)
+reply(global.mess.wait)
+try {
+let repoUrl = text.replace(/\.git$/, '')
+let match = repoUrl.match(/github\.com\/([^\/]+)\/([^\/]+)/)
+if (!match) return reply('Invalid GitHub URL.')
+let [, user, repo] = match
+let zipUrl = `https://api.github.com/repos/${user}/${repo}/zipball`
+await X.sendMessage(m.chat, { document: { url: zipUrl }, mimetype: 'application/zip', fileName: `${repo}.zip` }, { quoted: m })
+} catch(e) { reply('Error: ' + e.message) }
+} break
+
+//━━━━━━━━━━━━━━━━━━━━━━━━//
+// Search & Tools Commands
+case 'yts':
+case 'ytsearch': {
+if (!text) return reply(`Example: ${prefix}${command} [query]`)
+reply(global.mess.wait)
+try {
+let yts = require('yt-search')
+let search = await yts(text)
+if (!search.all.length) return reply('No results found.')
+let results = search.all.slice(0, 10).map((v, i) => `${i+1}. *${v.title}*\nChannel: ${v.author?.name || 'Unknown'}\nDuration: ${v.timestamp || 'N/A'}\nViews: ${v.views?.toLocaleString() || 'N/A'}\nURL: ${v.url}`).join('\n\n')
+reply(`*YouTube Search:* ${text}\n\n${results}`)
+} catch(e) { reply('Error: ' + e.message) }
+} break
+
+case 'img':
+case 'image': {
+if (!text) return reply(`Example: ${prefix}${command} cats`)
+reply(global.mess.wait)
+try {
+let imgUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(text)}?width=512&height=512&nologo=true`
+await X.sendMessage(m.chat, { image: { url: imgUrl }, caption: `*Image:* ${text}` }, { quoted: m })
+} catch(e) { reply('Error: ' + e.message) }
+} break
+
+case 'movie': {
+if (!text) return reply(`Example: ${prefix}movie Inception`)
+reply(global.mess.wait)
+try {
+let res = await fetch(`https://www.omdbapi.com/?t=${encodeURIComponent(text)}&apikey=742b79da`)
+let data = await res.json()
+if (data.Response === 'False') return reply('Movie not found.')
+let info = `*${data.Title}* (${data.Year})\n\nRating: ${data.imdbRating}/10\nGenre: ${data.Genre}\nDirector: ${data.Director}\nActors: ${data.Actors}\nPlot: ${data.Plot}\nRuntime: ${data.Runtime}\nLanguage: ${data.Language}\nCountry: ${data.Country}\nAwards: ${data.Awards}`
+if (data.Poster && data.Poster !== 'N/A') {
+await X.sendMessage(m.chat, { image: { url: data.Poster }, caption: info }, { quoted: m })
+} else reply(info)
+} catch(e) { reply('Error: ' + e.message) }
+} break
+
+case 'shazam': {
+if (!m.quoted || !/audio|video/.test(m.quoted.mimetype || '')) return reply(`Reply to an audio/video with ${prefix}shazam`)
+reply(global.mess.wait)
+try {
+reply('*Shazam:* Audio recognition is not available via free API. Try using the Shazam app directly.')
+} catch(e) { reply('Error: ' + e.message) }
+} break
+
+case 'fetch':
+case 'get': {
+if (!text) return reply(`Example: ${prefix}fetch https://example.com/api`)
+reply(global.mess.wait)
+try {
+let res = await fetch(text)
+let contentType = res.headers.get('content-type') || ''
+if (contentType.includes('json')) {
+let data = await res.json()
+reply(JSON.stringify(data, null, 2).slice(0, 4000))
+} else if (contentType.includes('image')) {
+let buffer = Buffer.from(await res.arrayBuffer())
+await X.sendMessage(m.chat, { image: buffer }, { quoted: m })
+} else if (contentType.includes('video')) {
+let buffer = Buffer.from(await res.arrayBuffer())
+await X.sendMessage(m.chat, { video: buffer }, { quoted: m })
+} else if (contentType.includes('audio')) {
+let buffer = Buffer.from(await res.arrayBuffer())
+await X.sendMessage(m.chat, { audio: buffer, mimetype: 'audio/mpeg' }, { quoted: m })
+} else {
+let txt = await res.text()
+reply(txt.slice(0, 4000))
+}
+} catch(e) { reply('Error: ' + e.message) }
+} break
+
+case 'ssweb':
+case 'ss': {
+if (!text) return reply(`Example: ${prefix}ssweb https://google.com`)
+reply(global.mess.wait)
+try {
+let ssUrl = `https://image.thum.io/get/width/1280/crop/720/noanimate/${text}`
+await X.sendMessage(m.chat, { image: { url: ssUrl }, caption: `*Screenshot:* ${text}` }, { quoted: m })
+} catch(e) { reply('Error: ' + e.message) }
+} break
+
+case 'trt':
+case 'translate': {
+if (!text) return reply(`Example: ${prefix}trt en|hello world\nOr reply to a message: ${prefix}trt en`)
+reply(global.mess.wait)
+try {
+let targetLang = 'en'
+let inputText = ''
+if (text.includes('|')) {
+let parts = text.split('|')
+targetLang = parts[0].trim()
+inputText = parts.slice(1).join('|').trim()
+} else if (m.quoted) {
+targetLang = text.trim() || 'en'
+inputText = m.quoted.text || ''
+} else {
+inputText = text
+}
+if (!inputText) return reply('No text to translate.')
+let res = await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(inputText)}&langpair=auto|${targetLang}`)
+let data = await res.json()
+let translated = data.responseData?.translatedText || 'Translation failed.'
+reply(`*Translation (${targetLang}):*\n${translated}`)
+} catch(e) { reply('Error: ' + e.message) }
+} break
+
+case 'transcribe': {
+if (!m.quoted || !/audio/.test(m.quoted.mimetype || '')) return reply(`Reply to an audio with ${prefix}transcribe`)
+reply(global.mess.wait)
+reply('*Transcribe:* Audio transcription requires a paid API. Use AI commands with audio description instead.')
+} break
+
+case 'locate':
+case 'location': {
+if (!text) return reply(`Example: ${prefix}location Nairobi, Kenya`)
+reply(global.mess.wait)
+try {
+let res = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(text)}&format=json&limit=1`, { headers: { 'User-Agent': 'ToosiiBot/1.0' } })
+let data = await res.json()
+if (!data.length) return reply('Location not found.')
+let loc = data[0]
+await X.sendMessage(m.chat, { location: { degreesLatitude: parseFloat(loc.lat), degreesLongitude: parseFloat(loc.lon) }, caption: loc.display_name }, { quoted: m })
+} catch(e) { reply('Error: ' + e.message) }
+} break
+
+case 'tourl': {
+if (!m.quoted) return reply(`Reply to an image/video/document with ${prefix}tourl`)
+reply(global.mess.wait)
+try {
+let mediaPath = await X.downloadAndSaveMediaMessage(m.quoted, 'tourl_temp')
+let media = fs.readFileSync(mediaPath)
+let url = await uploadImage(media)
+reply(`*File URL:*\n${url}`)
+fs.unlinkSync(mediaPath)
+} catch(e) { reply('Error: ' + e.message) }
+} break
+
+case 'vcf': {
+if (!m.isGroup) return reply(mess.OnlyGrup)
+if (!isAdmins && !isOwner) return reply(mess.admin)
+reply(global.mess.wait)
+try {
+let vcfContent = 'BEGIN:VCARD\nVERSION:3.0\n'
+for (let p of participants) {
+let num = p.id.split('@')[0]
+vcfContent += `BEGIN:VCARD\nVERSION:3.0\nFN:${num}\nTEL;type=CELL:+${num}\nEND:VCARD\n`
+}
+let vcfBuffer = Buffer.from(vcfContent)
+await X.sendMessage(m.chat, { document: vcfBuffer, mimetype: 'text/vcard', fileName: `${groupMetadata.subject}_contacts.vcf` }, { quoted: m })
+} catch(e) { reply('Error: ' + e.message) }
+} break
+
+case 'runtime':
+case 'alive': {
+let uptime = process.uptime()
+let hrs = Math.floor(uptime / 3600)
+let mins = Math.floor((uptime % 3600) / 60)
+let secs = Math.floor(uptime % 60)
+reply(`*${global.botname} is alive!*\n\nRuntime: ${hrs}h ${mins}m ${secs}s\nPrefix: ${prefix || '.'}\nMode: ${X.public ? 'Public' : 'Self'}\nVersion: ${global.botver || '2.0.0'}\n\n${global.packname}`)
+} break
+
+case 'block': {
+if (!isOwner) return reply(mess.OnlyOwner)
+let blockUser = (m.mentionedJid && m.mentionedJid[0]) ? m.mentionedJid[0] : m.quoted ? m.quoted.sender : text ? text.replace(/[^0-9]/g, '') + '@s.whatsapp.net' : null
+if (!blockUser) return reply(`Usage: ${prefix}block @user`)
+try {
+await X.updateBlockStatus(blockUser, 'block')
+reply(`*@${blockUser.split('@')[0]} has been blocked.*`)
+} catch(e) { reply('Error: ' + e.message) }
+} break
+
+case 'unblock': {
+if (!isOwner) return reply(mess.OnlyOwner)
+let unblockUser = (m.mentionedJid && m.mentionedJid[0]) ? m.mentionedJid[0] : m.quoted ? m.quoted.sender : text ? text.replace(/[^0-9]/g, '') + '@s.whatsapp.net' : null
+if (!unblockUser) return reply(`Usage: ${prefix}unblock @user`)
+try {
+await X.updateBlockStatus(unblockUser, 'unblock')
+reply(`*@${unblockUser.split('@')[0]} has been unblocked.*`)
+} catch(e) { reply('Error: ' + e.message) }
+} break
+
+case 'listblock': {
+if (!isOwner) return reply(mess.OnlyOwner)
+try {
+let blocked = await X.fetchBlocklist()
+if (!blocked.length) return reply('No blocked users.')
+let list = blocked.map((b, i) => `${i+1}. @${b.split('@')[0]}`).join('\n')
+X.sendMessage(from, { text: `*Blocked Users (${blocked.length}):*\n\n${list}`, mentions: blocked }, { quoted: m })
+} catch(e) { reply('Error: ' + e.message) }
+} break
+
+//━━━━━━━━━━━━━━━━━━━━━━━━//
+// Sticker & Converter Commands
+case 'stickercrop':
+case 'scrop': {
+if (!m.quoted || !/image/.test(m.quoted.mimetype || '')) return reply(`Reply to an image with ${prefix}stickercrop`)
+reply(global.mess.wait)
+try {
+let mediaPath = await X.downloadAndSaveMediaMessage(m.quoted, 'scrop_temp')
+let media = fs.readFileSync(mediaPath)
+let sticker = new Sticker(media, { pack: global.packname, author: global.author, type: 'crop', quality: 80 })
+await X.sendMessage(m.chat, await sticker.toMessage(), { quoted: m })
+fs.unlinkSync(mediaPath)
+} catch(e) { reply('Error: ' + e.message) }
+} break
+
+case 'take':
+case 'steal': {
+if (!m.quoted || !/sticker/.test(m.quoted.mtype || '')) return reply(`Reply to a sticker with ${prefix}take [pack|author]`)
+reply(global.mess.wait)
+try {
+let [pack, auth] = (text || `${global.packname}|${global.author}`).split('|')
+let stickerBuf = await m.quoted.download()
+let sticker = new Sticker(stickerBuf, { pack: pack?.trim() || global.packname, author: auth?.trim() || global.author, type: 'full' })
+await X.sendMessage(m.chat, await sticker.toMessage(), { quoted: m })
+} catch(e) { reply('Error: ' + e.message) }
+} break
+
+case 'meme':
+case 'smeme': {
+if (!m.quoted || !/image/.test(m.quoted.mimetype || '')) return reply(`Reply to an image with ${prefix}meme [top text|bottom text]`)
+if (!text) return reply(`Example: ${prefix}meme When the code works|But you don't know why`)
+reply(global.mess.wait)
+try {
+let [topText, bottomText] = text.split('|').map(t => (t || '').trim())
+let mediaPath = await X.downloadAndSaveMediaMessage(m.quoted, 'meme_temp')
+let media = fs.readFileSync(mediaPath)
+let url = await uploadImage(media)
+let memeUrl = `https://api.memegen.link/images/custom/${encodeURIComponent(topText || '_')}/${encodeURIComponent(bottomText || '_')}.png?background=${encodeURIComponent(url)}`
+await X.sendMessage(m.chat, { image: { url: memeUrl }, caption: '*Meme created!*' }, { quoted: m })
+fs.unlinkSync(mediaPath)
+} catch(e) { reply('Error: ' + e.message) }
+} break
+
+case 'blur': {
+if (!m.quoted || !/image/.test(m.quoted.mimetype || '')) return reply(`Reply to an image with ${prefix}blur`)
+reply(global.mess.wait)
+try {
+reply('*Blur:* Image blur requires image processing libraries. Use a photo editing app for this feature.')
+} catch(e) { reply('Error: ' + e.message) }
+} break
+
+case 'removebg': {
+if (!m.quoted || !/image/.test(m.quoted.mimetype || '')) return reply(`Reply to an image with ${prefix}removebg`)
+reply(global.mess.wait)
+try {
+let mediaPath = await X.downloadAndSaveMediaMessage(m.quoted, 'rmbg_temp')
+let media = fs.readFileSync(mediaPath)
+let url = await uploadImage(media)
+let apiRes = await fetch(`https://api.remove.bg/v1.0/removebg`, { method: 'POST', headers: { 'X-Api-Key': process.env.REMOVEBG_KEY || '' }, body: JSON.stringify({ image_url: url, size: 'auto' }) })
+if (!apiRes.ok) return reply('*RemoveBG:* API key not configured or limit reached.\nSet REMOVEBG_KEY environment variable.')
+let buffer = Buffer.from(await apiRes.arrayBuffer())
+await X.sendMessage(m.chat, { image: buffer, caption: '*Background Removed!*' }, { quoted: m })
+fs.unlinkSync(mediaPath)
+} catch(e) { reply('Error: ' + e.message) }
+} break
+
+case 'simage':
+case 'timage':
+case 'toimage': {
+if (!m.quoted || !/sticker/.test(m.quoted.mtype || '')) return reply(`Reply to a sticker with ${prefix}${command}`)
+reply(global.mess.wait)
+try {
+let stickerBuf = await m.quoted.download()
+await X.sendMessage(m.chat, { image: stickerBuf, caption: '*Sticker converted to image!*' }, { quoted: m })
+} catch(e) { reply('Error: ' + e.message) }
+} break
+
+case 'totext': {
+if (!m.quoted || !/image/.test(m.quoted.mimetype || '')) return reply(`Reply to an image with ${prefix}totext`)
+reply(global.mess.wait)
+try {
+let mediaPath = await X.downloadAndSaveMediaMessage(m.quoted, 'ocr_temp')
+let media = fs.readFileSync(mediaPath)
+let url = await uploadImage(media)
+let res = await axios.get('https://gemini-api-5k0h.onrender.com/gemini/image', { params: { q: 'Extract all text from this image. Return only the text content.', url: url } })
+let extractedText = res.data?.content || 'No text found.'
+reply(`*Extracted Text:*\n${extractedText}`)
+fs.unlinkSync(mediaPath)
+} catch(e) { reply('Error: ' + e.message) }
+} break
+
+case 'toaudio':
+case 'tomp3': {
+if (!m.quoted || !/video/.test(m.quoted.mimetype || '')) return reply(`Reply to a video with ${prefix}${command}`)
+reply(global.mess.wait)
+try {
+let mediaPath = await X.downloadAndSaveMediaMessage(m.quoted, 'tomp3_temp')
+let media = fs.readFileSync(mediaPath)
+await X.sendMessage(m.chat, { audio: media, mimetype: 'audio/mpeg' }, { quoted: m })
+fs.unlinkSync(mediaPath)
+} catch(e) { reply('Error: ' + e.message) }
+} break
+
+case 'toppt': {
+if (!m.quoted || !/audio/.test(m.quoted.mimetype || '')) return reply(`Reply to an audio with ${prefix}toppt`)
+reply(global.mess.wait)
+try {
+let audioBuf = await m.quoted.download()
+await X.sendMessage(m.chat, { audio: audioBuf, mimetype: 'audio/ogg; codecs=opus', ptt: true }, { quoted: m })
+} catch(e) { reply('Error: ' + e.message) }
+} break
+
+//━━━━━━━━━━━━━━━━━━━━━━━━//
+// Game Commands
+case 'tictactoe':
+case 'ttt': {
+if (!m.isGroup) return reply(mess.OnlyGrup)
+let tttUser = (m.mentionedJid && m.mentionedJid[0]) ? m.mentionedJid[0] : m.quoted ? m.quoted.sender : null
+if (!tttUser) return reply(`Usage: ${prefix}ttt @opponent`)
+if (tttUser === sender) return reply('You cannot play against yourself!')
+if (!global.tttGames) global.tttGames = {}
+let gameId = m.chat
+if (global.tttGames[gameId]) return reply('A game is already in progress in this chat. Use .tttend to end it.')
+global.tttGames[gameId] = { board: [' ',' ',' ',' ',' ',' ',' ',' ',' '], players: { X: sender, O: tttUser }, turn: 'X' }
+let boardDisplay = (b) => `\`\`\`\n ${b[0]} | ${b[1]} | ${b[2]}\n---+---+---\n ${b[3]} | ${b[4]} | ${b[5]}\n---+---+---\n ${b[6]} | ${b[7]} | ${b[8]}\n\`\`\``
+X.sendMessage(from, { text: `*Tic Tac Toe*\n\n@${sender.split('@')[0]} (X) vs @${tttUser.split('@')[0]} (O)\n\n${boardDisplay(global.tttGames[gameId].board)}\n\n@${sender.split('@')[0]}'s turn (X)\nReply with a number (1-9) to place your mark.`, mentions: [sender, tttUser] }, { quoted: m })
+} break
+
+case 'tttend': {
+if (!global.tttGames || !global.tttGames[m.chat]) return reply('No game in progress.')
+delete global.tttGames[m.chat]
+reply('*Game ended.*')
+} break
+
+case 'connect4':
+case 'c4': {
+reply('*Connect 4:* Coming soon! Use .ttt for Tic Tac Toe.')
+} break
+
+case 'hangman': {
+if (!global.hangmanGames) global.hangmanGames = {}
+if (global.hangmanGames[m.chat]) return reply('A hangman game is already in progress! Use .hangmanend to end it.')
+let words = ['javascript', 'python', 'programming', 'computer', 'algorithm', 'database', 'internet', 'software', 'hardware', 'keyboard', 'function', 'variable', 'boolean', 'whatsapp', 'telegram', 'android', 'network', 'security', 'elephant', 'universe']
+let word = words[Math.floor(Math.random() * words.length)]
+global.hangmanGames[m.chat] = { word, guessed: [], lives: 6, players: [sender] }
+let display = word.split('').map(l => '_').join(' ')
+reply(`*Hangman Game*\n\n${display}\n\nLives: ${'❤️'.repeat(6)}\nLetters: ${word.length}\n\nSend a single letter to guess!`)
+} break
+
+case 'hangmanend': {
+if (!global.hangmanGames || !global.hangmanGames[m.chat]) return reply('No hangman game in progress.')
+reply(`*Game ended.* The word was: *${global.hangmanGames[m.chat].word}*`)
+delete global.hangmanGames[m.chat]
+} break
+
+case 'trivia': {
+reply(global.mess.wait)
+try {
+let res = await fetch('https://opentdb.com/api.php?amount=1&type=multiple')
+let data = await res.json()
+if (!data.results || !data.results.length) return reply('Failed to fetch trivia.')
+let q = data.results[0]
+let answers = [...q.incorrect_answers, q.correct_answer].sort(() => Math.random() - 0.5)
+let decode = (str) => str.replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&quot;/g,'"').replace(/&#039;/g,"'")
+if (!global.triviaGames) global.triviaGames = {}
+global.triviaGames[m.chat] = { answer: decode(q.correct_answer).toLowerCase(), timeout: setTimeout(() => { if (global.triviaGames[m.chat]) { reply(`*Time up!* Answer: *${decode(q.correct_answer)}*`); delete global.triviaGames[m.chat] } }, 30000) }
+let qText = `*Trivia (${decode(q.category)})*\nDifficulty: ${q.difficulty}\n\n${decode(q.question)}\n\n`
+answers.forEach((a, i) => qText += `${String.fromCharCode(65+i)}. ${decode(a)}\n`)
+qText += `\nAnswer within 30 seconds!`
+reply(qText)
+} catch(e) { reply('Error: ' + e.message) }
+} break
+
+case 'answer': {
+if (!global.triviaGames || !global.triviaGames[m.chat]) return reply('No trivia in progress. Use .trivia to start.')
+let userAnswer = text?.toLowerCase().trim()
+if (!userAnswer) return reply('Please provide your answer.')
+if (userAnswer === global.triviaGames[m.chat].answer || userAnswer === global.triviaGames[m.chat].answer.charAt(0)) {
+clearTimeout(global.triviaGames[m.chat].timeout)
+delete global.triviaGames[m.chat]
+reply(`*Correct!* Well done, @${sender.split('@')[0]}! 🎉`)
+} else reply(`*Wrong!* Try again or wait for timeout.`)
+} break
+
+case 'truth': {
+let truths = ['What is your biggest fear?', 'What is the most embarrassing thing you have done?', 'What is a secret you have never told anyone?', 'Who was your first crush?', 'What is the worst lie you have told?', 'What is your guilty pleasure?', 'Have you ever cheated on a test?', 'What is the most childish thing you still do?', 'What is your biggest insecurity?', 'What was your most awkward date?', 'Have you ever been caught lying?', 'What is the craziest thing on your bucket list?', 'What is the weirdest dream you have had?', 'If you could be invisible for a day what would you do?', 'What is the most stupid thing you have ever done?']
+reply(`*Truth:*\n${truths[Math.floor(Math.random() * truths.length)]}`)
+} break
+
+case 'dare': {
+let dares = ['Send a voice note singing your favorite song.', 'Change your profile picture to something funny for 1 hour.', 'Send the last photo in your gallery.', 'Text your crush right now.', 'Do 10 pushups and send a video.', 'Send a voice note doing your best animal impression.', 'Let someone else send a message from your phone.', 'Share your screen time report.', 'Send a selfie right now without filters.', 'Call the 5th person in your contacts and sing happy birthday.', 'Post a childhood photo in the group.', 'Let the group choose your status for 24 hours.', 'Send a voice note speaking in an accent.', 'Do a handstand and send proof.', 'Type with your eyes closed for the next message.']
+reply(`*Dare:*\n${dares[Math.floor(Math.random() * dares.length)]}`)
+} break
+
+case '8ball': {
+if (!text) return reply(`Example: ${prefix}8ball Will I pass my exam?`)
+let responses8 = ['It is certain.', 'It is decidedly so.', 'Without a doubt.', 'Yes definitely.', 'You may rely on it.', 'As I see it, yes.', 'Most likely.', 'Outlook good.', 'Yes.', 'Signs point to yes.', 'Reply hazy, try again.', 'Ask again later.', 'Better not tell you now.', 'Cannot predict now.', 'Concentrate and ask again.', 'Don\'t count on it.', 'My reply is no.', 'My sources say no.', 'Outlook not so good.', 'Very doubtful.']
+reply(`*🎱 ${text}*\n\n${responses8[Math.floor(Math.random() * responses8.length)]}`)
+} break
+
+case 'cf':
+case 'coinflip':
+case 'flip': {
+let coin = Math.random() < 0.5 ? 'Heads' : 'Tails'
+reply(`*Coin Flip:* 🪙 ${coin}!`)
+} break
+
+case 'dice':
+case 'roll': {
+let sides = parseInt(args[0]) || 6
+let result = Math.floor(Math.random() * sides) + 1
+reply(`*Dice Roll (d${sides}):* 🎲 ${result}`)
+} break
+
+case 'rps': {
+let choices = ['rock', 'paper', 'scissors']
+let userChoice = (args[0] || '').toLowerCase()
+if (!['rock', 'paper', 'scissors', 'r', 'p', 's'].includes(userChoice)) return reply(`Usage: ${prefix}rps rock/paper/scissors`)
+if (userChoice === 'r') userChoice = 'rock'
+if (userChoice === 'p') userChoice = 'paper'
+if (userChoice === 's') userChoice = 'scissors'
+let botChoice = choices[Math.floor(Math.random() * 3)]
+let rpsResult = userChoice === botChoice ? 'Draw!' : (userChoice === 'rock' && botChoice === 'scissors') || (userChoice === 'paper' && botChoice === 'rock') || (userChoice === 'scissors' && botChoice === 'paper') ? 'You win! 🎉' : 'You lose! 😢'
+reply(`*Rock Paper Scissors*\n\nYou: ${userChoice}\nBot: ${botChoice}\n\n*${rpsResult}*`)
+} break
+
+case 'slot': {
+let symbols = ['🍒', '🍋', '🍊', '🍇', '💎', '7️⃣', '🔔']
+let s1 = symbols[Math.floor(Math.random() * symbols.length)]
+let s2 = symbols[Math.floor(Math.random() * symbols.length)]
+let s3 = symbols[Math.floor(Math.random() * symbols.length)]
+let slotWin = s1 === s2 && s2 === s3 ? '🎉 JACKPOT! You won!' : s1 === s2 || s2 === s3 || s1 === s3 ? '😃 Two match! Small win!' : '😢 No match. Try again!'
+reply(`*🎰 Slot Machine*\n\n[ ${s1} | ${s2} | ${s3} ]\n\n${slotWin}`)
+} break
+
+//━━━━━━━━━━━━━━━━━━━━━━━━//
+// Fun & Social Commands
+case 'compliment': {
+let compliments = ['You are an amazing person!', 'Your smile lights up the room!', 'You are incredibly talented!', 'The world is better with you in it!', 'You have a heart of gold!', 'Your kindness is inspiring!', 'You are a ray of sunshine!', 'You make everything better!', 'You are one of a kind!', 'Your energy is contagious!']
+let target = (m.mentionedJid && m.mentionedJid[0]) ? `@${m.mentionedJid[0].split('@')[0]}` : pushname
+reply(`*Compliment for ${target}:*\n${compliments[Math.floor(Math.random() * compliments.length)]}`)
+} break
+
+case 'insult': {
+let insults = ['You are the human equivalent of a participation award.', 'If you were a spice, you would be flour.', 'You bring everyone so much joy when you leave.', 'You are like a cloud. When you disappear it is a beautiful day.', 'You are proof that even evolution makes mistakes.', 'Light travels faster than sound, which is why you seemed bright until you spoke.']
+let target2 = (m.mentionedJid && m.mentionedJid[0]) ? `@${m.mentionedJid[0].split('@')[0]}` : pushname
+reply(`*Roast for ${target2}:*\n${insults[Math.floor(Math.random() * insults.length)]}`)
+} break
+
+case 'flirt': {
+let flirts = ['Are you a magician? Because whenever I look at you, everyone else disappears.', 'Do you have a map? I keep getting lost in your eyes.', 'Are you a campfire? Because you are hot and I want s\'more.', 'Is your name Google? Because you have everything I have been searching for.', 'Do you believe in love at first sight, or should I walk by again?', 'If beauty were time, you would be an eternity.']
+reply(`*Flirt:*\n${flirts[Math.floor(Math.random() * flirts.length)]}`)
+} break
+
+case 'shayari': {
+let shayaris = ['Dil mein tere liye jagah hai,\nPar tu door hai, yeh kya wajah hai.', 'Teri yaad mein hum pagal hue,\nDuniya se hum bekhabar hue.', 'Mohabbat ka koi mol nahi,\nDil hai yeh koi phool nahi.', 'Zindagi mein teri kami hai,\nHar khushi adhuri si hai.', 'Tere bina zindagi se koi shikwa nahi,\nTere bina zindagi hai toh kya.']
+reply(`*Shayari:*\n${shayaris[Math.floor(Math.random() * shayaris.length)]}`)
+} break
+
+case 'goodnight': {
+let gn = ['Sweet dreams! May tomorrow bring you joy. 🌙', 'Good night! Sleep tight and don\'t let the bugs bite! 💤', 'Wishing you a peaceful night full of beautiful dreams. ✨', 'Close your eyes and let the stars guide your dreams. 🌟', 'Good night! Tomorrow is a new opportunity. Rest well! 😴']
+reply(`*Good Night:*\n${gn[Math.floor(Math.random() * gn.length)]}`)
+} break
+
+case 'roseday': {
+reply('🌹 *Happy Rose Day!* 🌹\nRoses are red, violets are blue, sending this beautiful rose just for you! May your day be as beautiful as a garden full of roses.')
+} break
+
+case 'character': {
+let characters = ['Naruto Uzumaki', 'Goku', 'Luffy', 'Batman', 'Spider-Man', 'Iron Man', 'Sherlock Holmes', 'Harry Potter', 'Pikachu', 'Mario', 'Sonic', 'Link (Zelda)', 'Levi Ackerman', 'Tanjiro Kamado', 'Eren Yeager', 'Gojo Satoru']
+reply(`*Random Character:*\n${characters[Math.floor(Math.random() * characters.length)]}`)
+} break
+
+case 'ship': {
+if (!m.isGroup) return reply(mess.OnlyGrup)
+let members = participants.map(p => p.id)
+let p1 = m.mentionedJid && m.mentionedJid[0] ? m.mentionedJid[0] : members[Math.floor(Math.random() * members.length)]
+let p2 = m.mentionedJid && m.mentionedJid[1] ? m.mentionedJid[1] : members[Math.floor(Math.random() * members.length)]
+let shipPercent = Math.floor(Math.random() * 101)
+let bar = '█'.repeat(Math.floor(shipPercent/10)) + '░'.repeat(10 - Math.floor(shipPercent/10))
+X.sendMessage(from, { text: `*💕 Love Ship 💕*\n\n@${p1.split('@')[0]} ❤️ @${p2.split('@')[0]}\n\n[${bar}] ${shipPercent}%\n\n${shipPercent > 80 ? 'Perfect match! 💕' : shipPercent > 50 ? 'Good chemistry! 💖' : shipPercent > 30 ? 'There is potential! 💛' : 'Not meant to be... 💔'}`, mentions: [p1, p2] }, { quoted: m })
+} break
+
+case 'simp': {
+let simpTarget = (m.mentionedJid && m.mentionedJid[0]) ? m.mentionedJid[0] : m.quoted ? m.quoted.sender : sender
+let simpLevel = Math.floor(Math.random() * 101)
+X.sendMessage(from, { text: `*Simp Meter:*\n@${simpTarget.split('@')[0]}\n\n${'🟩'.repeat(Math.floor(simpLevel/10))}${'⬜'.repeat(10 - Math.floor(simpLevel/10))} ${simpLevel}%\n\n${simpLevel > 80 ? 'MAXIMUM SIMP! 😂' : simpLevel > 50 ? 'Moderate simp 😏' : 'Not a simp 😎'}`, mentions: [simpTarget] }, { quoted: m })
+} break
+
+case 'wasted': {
+let wastedTarget = (m.mentionedJid && m.mentionedJid[0]) ? m.mentionedJid[0] : m.quoted ? m.quoted.sender : sender
+X.sendMessage(from, { text: `*WASTED*\n\n@${wastedTarget.split('@')[0]} is WASTED 💀\n\nR.I.P.`, mentions: [wastedTarget] }, { quoted: m })
+} break
+
+case 'stupid': {
+let stupidTarget = (m.mentionedJid && m.mentionedJid[0]) ? m.mentionedJid[0] : m.quoted ? m.quoted.sender : sender
+let stupidLevel = Math.floor(Math.random() * 101)
+X.sendMessage(from, { text: `*Stupid Meter:*\n@${stupidTarget.split('@')[0]}\n\n${'🧠'.repeat(Math.floor(stupidLevel/10))}${'⬜'.repeat(10 - Math.floor(stupidLevel/10))} ${stupidLevel}%\n\n${stupidLevel > 80 ? 'Extremely stupid 🤡' : stupidLevel > 50 ? 'Below average IQ 😅' : 'Actually smart! 🧐'}`, mentions: [stupidTarget] }, { quoted: m })
+} break
+
+case 'joke': {
+reply(global.mess.wait)
+try {
+let res = await fetch('https://v2.jokeapi.dev/joke/Any?safe-mode')
+let data = await res.json()
+if (data.type === 'single') reply(`*😂 Joke:*\n${data.joke}`)
+else reply(`*😂 Joke:*\n${data.setup}\n\n${data.delivery}`)
+} catch { reply('Could not fetch a joke right now.') }
+} break
+
+case 'quote':
+case 'motivation': {
+reply(global.mess.wait)
+try {
+let res = await fetch('https://api.quotable.io/random')
+let data = await res.json()
+reply(`*💬 Quote:*\n"${data.content}"\n\n— *${data.author}*`)
+} catch {
+let quotes = ['"The only way to do great work is to love what you do." — Steve Jobs', '"Innovation distinguishes between a leader and a follower." — Steve Jobs', '"Life is what happens when you\'re busy making other plans." — John Lennon', '"The future belongs to those who believe in the beauty of their dreams." — Eleanor Roosevelt']
+reply(quotes[Math.floor(Math.random() * quotes.length)])
+}
+} break
+
+case 'fact': {
+reply(global.mess.wait)
+try {
+let res = await fetch('https://uselessfacts.jsph.pl/api/v2/facts/random')
+let data = await res.json()
+reply(`*📚 Random Fact:*\n${data.text}`)
+} catch {
+let facts = ['Honey never spoils.', 'Octopuses have three hearts.', 'Bananas are berries but strawberries are not.', 'A group of flamingos is called a flamboyance.', 'The shortest war in history lasted 38 minutes.']
+reply(`*📚 Random Fact:*\n${facts[Math.floor(Math.random() * facts.length)]}`)
+}
+} break
+
+//━━━━━━━━━━━━━━━━━━━━━━━━//
+// Anime Commands
+case 'neko': {
+reply(global.mess.wait)
+try {
+let res = await fetch('https://nekos.life/api/v2/img/neko')
+let data = await res.json()
+await X.sendMessage(m.chat, { image: { url: data.url }, caption: '*Neko!* 🐱' }, { quoted: m })
+} catch { reply('Failed to fetch neko image.') }
+} break
+
+case 'waifu': {
+reply(global.mess.wait)
+try {
+let res = await fetch('https://api.waifu.pics/sfw/waifu')
+let data = await res.json()
+await X.sendMessage(m.chat, { image: { url: data.url }, caption: '*Waifu!* 💕' }, { quoted: m })
+} catch { reply('Failed to fetch waifu image.') }
+} break
+
+case 'loli': {
+reply(global.mess.wait)
+try {
+let res = await fetch('https://nekos.life/api/v2/img/neko')
+let data = await res.json()
+await X.sendMessage(m.chat, { image: { url: data.url }, caption: '*Anime!* 🌸' }, { quoted: m })
+} catch { reply('Failed to fetch image.') }
+} break
+
+case 'nom': {
+reply(global.mess.wait)
+try {
+let res = await fetch('https://api.waifu.pics/sfw/nom')
+let data = await res.json()
+await X.sendMessage(m.chat, { image: { url: data.url }, caption: '*Nom nom!* 😋' }, { quoted: m })
+} catch { reply('Failed to fetch image.') }
+} break
+
+case 'poke': {
+reply(global.mess.wait)
+try {
+let res = await fetch('https://api.waifu.pics/sfw/poke')
+let data = await res.json()
+let pokeTarget = (m.mentionedJid && m.mentionedJid[0]) ? `@${m.mentionedJid[0].split('@')[0]}` : ''
+await X.sendMessage(m.chat, { image: { url: data.url }, caption: `*${pushname} pokes ${pokeTarget || 'someone'}!* 👉`, mentions: m.mentionedJid || [] }, { quoted: m })
+} catch { reply('Failed to fetch image.') }
+} break
+
+case 'cry': {
+reply(global.mess.wait)
+try {
+let res = await fetch('https://api.waifu.pics/sfw/cry')
+let data = await res.json()
+await X.sendMessage(m.chat, { image: { url: data.url }, caption: `*${pushname} is crying!* 😢` }, { quoted: m })
+} catch { reply('Failed to fetch image.') }
+} break
+
+case 'kiss': {
+reply(global.mess.wait)
+try {
+let res = await fetch('https://api.waifu.pics/sfw/kiss')
+let data = await res.json()
+let kissTarget = (m.mentionedJid && m.mentionedJid[0]) ? `@${m.mentionedJid[0].split('@')[0]}` : 'someone'
+await X.sendMessage(m.chat, { image: { url: data.url }, caption: `*${pushname} kisses ${kissTarget}!* 💋`, mentions: m.mentionedJid || [] }, { quoted: m })
+} catch { reply('Failed to fetch image.') }
+} break
+
+case 'pat': {
+reply(global.mess.wait)
+try {
+let res = await fetch('https://api.waifu.pics/sfw/pat')
+let data = await res.json()
+let patTarget = (m.mentionedJid && m.mentionedJid[0]) ? `@${m.mentionedJid[0].split('@')[0]}` : 'someone'
+await X.sendMessage(m.chat, { image: { url: data.url }, caption: `*${pushname} pats ${patTarget}!* 🤗`, mentions: m.mentionedJid || [] }, { quoted: m })
+} catch { reply('Failed to fetch image.') }
+} break
+
+case 'hug': {
+reply(global.mess.wait)
+try {
+let res = await fetch('https://api.waifu.pics/sfw/hug')
+let data = await res.json()
+let hugTarget = (m.mentionedJid && m.mentionedJid[0]) ? `@${m.mentionedJid[0].split('@')[0]}` : 'someone'
+await X.sendMessage(m.chat, { image: { url: data.url }, caption: `*${pushname} hugs ${hugTarget}!* 🤗`, mentions: m.mentionedJid || [] }, { quoted: m })
+} catch { reply('Failed to fetch image.') }
+} break
+
+case 'wink': {
+reply(global.mess.wait)
+try {
+let res = await fetch('https://api.waifu.pics/sfw/wink')
+let data = await res.json()
+await X.sendMessage(m.chat, { image: { url: data.url }, caption: `*${pushname} winks!* 😉` }, { quoted: m })
+} catch { reply('Failed to fetch image.') }
+} break
+
+case 'facepalm': {
+reply(global.mess.wait)
+try {
+let res = await fetch('https://api.waifu.pics/sfw/cringe')
+let data = await res.json()
+await X.sendMessage(m.chat, { image: { url: data.url }, caption: `*${pushname} facepalms!* 🤦` }, { quoted: m })
+} catch { reply('Failed to fetch image.') }
+} break
+
+case 'anime': {
+if (!text) return reply(`Example: ${prefix}anime Naruto`)
+reply(global.mess.wait)
+try {
+let res = await fetch(`https://api.jikan.moe/v4/anime?q=${encodeURIComponent(text)}&limit=5`)
+let data = await res.json()
+if (!data.data || !data.data.length) return reply('No anime found.')
+let animeList = data.data.map((a, i) => `${i+1}. *${a.title}* (${a.title_japanese || ''})\nScore: ${a.score || 'N/A'}\nEpisodes: ${a.episodes || 'N/A'}\nStatus: ${a.status}\nGenres: ${(a.genres || []).map(g => g.name).join(', ')}\nSynopsis: ${(a.synopsis || 'N/A').slice(0, 200)}...\nURL: ${a.url}`).join('\n\n')
+if (data.data[0].images?.jpg?.image_url) {
+await X.sendMessage(m.chat, { image: { url: data.data[0].images.jpg.image_url }, caption: `*Anime Search: ${text}*\n\n${animeList}` }, { quoted: m })
+} else reply(`*Anime Search: ${text}*\n\n${animeList}`)
+} catch(e) { reply('Error: ' + e.message) }
+} break
+
+//━━━━━━━━━━━━━━━━━━━━━━━━//
+// Text Maker Commands (using Pollinations image generation)
+case 'metallic':
+case 'ice':
+case 'snow':
+case 'impressive':
+case 'matrix':
+case 'light':
+case 'neon':
+case 'devil':
+case 'purple':
+case 'thunder':
+case 'leaves':
+case '1917':
+case 'arena':
+case 'hacker':
+case 'sand':
+case 'blackpink':
+case 'glitch':
+case 'fire': {
+if (!text) return reply(`Example: ${prefix}${command} Your Text Here`)
+reply(global.mess.wait)
+try {
+let styleMap = { metallic: 'metallic chrome 3D text', ice: 'frozen ice crystal text', snow: 'snowy winter text', impressive: 'impressive golden 3D text', matrix: 'green matrix code text', light: 'glowing light text', neon: 'neon glowing sign text', devil: 'dark red devil fire text', purple: 'purple galaxy text', thunder: 'lightning thunder text', leaves: 'green leaves nature text', '1917': 'vintage war 1917 style text', arena: 'battle arena warrior text', hacker: 'green hacker terminal text', sand: 'sandy desert text', blackpink: 'blackpink kpop style text', glitch: 'digital glitch effect text', fire: 'burning fire flame text' }
+let style = styleMap[command] || command + ' style text'
+let imgUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(`"${text}" written in ${style} style, text art, typography, digital art, high quality`)}?width=1024&height=512&nologo=true`
+await X.sendMessage(m.chat, { image: { url: imgUrl }, caption: `*${command.charAt(0).toUpperCase() + command.slice(1)} Text:* ${text}` }, { quoted: m })
+} catch(e) { reply('Error: ' + e.message) }
+} break
+
+//━━━━━━━━━━━━━━━━━━━━━━━━//
+// Image Edit Commands
+case 'heart': {
+if (!m.quoted || !/image/.test(m.quoted.mimetype || '')) {
+let heartTarget = (m.mentionedJid && m.mentionedJid[0]) ? m.mentionedJid[0] : sender
+X.sendMessage(from, { text: `*💕 ${pushname} sends love to @${heartTarget.split('@')[0]}! 💕*`, mentions: [heartTarget] }, { quoted: m })
+} else { reply('*Heart effect applied!* 💕') }
+} break
+
+case 'horny': {
+let hornyTarget = (m.mentionedJid && m.mentionedJid[0]) ? m.mentionedJid[0] : m.quoted ? m.quoted.sender : sender
+let hornyLevel = Math.floor(Math.random() * 101)
+X.sendMessage(from, { text: `*Horny Meter:*\n@${hornyTarget.split('@')[0]}\n\n${'🔥'.repeat(Math.floor(hornyLevel/10))}${'⬜'.repeat(10 - Math.floor(hornyLevel/10))} ${hornyLevel}%`, mentions: [hornyTarget] }, { quoted: m })
+} break
+
+case 'circle': {
+if (!m.quoted || !/image/.test(m.quoted.mimetype || '')) return reply(`Reply to an image with ${prefix}circle`)
+reply(global.mess.wait)
+try {
+let buf = await m.quoted.download()
+await X.sendMessage(m.chat, { sticker: buf }, { quoted: m })
+} catch(e) { reply('Error: ' + e.message) }
+} break
+
+case 'lgbt': {
+let lgbtTarget = (m.mentionedJid && m.mentionedJid[0]) ? m.mentionedJid[0] : sender
+X.sendMessage(from, { text: `*🏳️‍🌈 @${lgbtTarget.split('@')[0]} supports LGBTQ+! 🏳️‍🌈*\n🌈 Love is Love 🌈`, mentions: [lgbtTarget] }, { quoted: m })
+} break
+
+case 'lolice': {
+let loliceTarget = (m.mentionedJid && m.mentionedJid[0]) ? m.mentionedJid[0] : sender
+X.sendMessage(from, { text: `*🚨 LOLICE ALERT! 🚨*\n@${loliceTarget.split('@')[0]} has been caught by the Lolice! 🚔`, mentions: [loliceTarget] }, { quoted: m })
+} break
+
+case 'namecard': {
+let ncName = text || pushname
+reply(`╔══════════════╗\n   *${ncName}*\n   ${global.botname}\n╚══════════════╝`)
+} break
+
+case 'tweet': {
+if (!text) return reply(`Example: ${prefix}tweet I love coding!`)
+reply(`*Tweet by @${pushname}:*\n\n${text}\n\n❤️ ${Math.floor(Math.random() * 10000)}  🔁 ${Math.floor(Math.random() * 5000)}  💬 ${Math.floor(Math.random() * 1000)}`)
+} break
+
+case 'ytcomment': {
+if (!text) return reply(`Example: ${prefix}ytcomment This video is amazing!`)
+reply(`*YouTube Comment:*\n\n👤 *${pushname}*\n${text}\n\n👍 ${Math.floor(Math.random() * 5000)}  👎  💬 ${Math.floor(Math.random() * 200)} replies`)
+} break
+
+case 'comrade': {
+let comradeTarget = (m.mentionedJid && m.mentionedJid[0]) ? m.mentionedJid[0] : sender
+X.sendMessage(from, { text: `*☭ Our Comrade @${comradeTarget.split('@')[0]}! ☭*\nServing the motherland with honor!`, mentions: [comradeTarget] }, { quoted: m })
+} break
+
+case 'gay': {
+let gayTarget = (m.mentionedJid && m.mentionedJid[0]) ? m.mentionedJid[0] : sender
+let gayLevel = Math.floor(Math.random() * 101)
+X.sendMessage(from, { text: `*Gay Meter:*\n@${gayTarget.split('@')[0]}\n\n${'🏳️‍🌈'.repeat(Math.floor(gayLevel/10))}${'⬜'.repeat(10 - Math.floor(gayLevel/10))} ${gayLevel}%`, mentions: [gayTarget] }, { quoted: m })
+} break
+
+case 'glass': {
+if (!m.quoted || !/image/.test(m.quoted.mimetype || '')) return reply(`Reply to an image with ${prefix}glass`)
+reply('*Glass effect applied!* 🪟')
+} break
+
+case 'jail': {
+let jailTarget = (m.mentionedJid && m.mentionedJid[0]) ? m.mentionedJid[0] : sender
+X.sendMessage(from, { text: `*🔒 @${jailTarget.split('@')[0]} has been jailed! 🔒*\nCrime: Being too awesome\nSentence: Life 😂`, mentions: [jailTarget] }, { quoted: m })
+} break
+
+case 'passed': {
+let passedTarget = (m.mentionedJid && m.mentionedJid[0]) ? m.mentionedJid[0] : sender
+X.sendMessage(from, { text: `*✅ @${passedTarget.split('@')[0]} has PASSED! ✅*\nCongratulations! 🎉`, mentions: [passedTarget] }, { quoted: m })
+} break
+
+case 'triggered': {
+let triggeredTarget = (m.mentionedJid && m.mentionedJid[0]) ? m.mentionedJid[0] : sender
+X.sendMessage(from, { text: `*⚡ @${triggeredTarget.split('@')[0]} is TRIGGERED! ⚡*\n😤😤😤`, mentions: [triggeredTarget] }, { quoted: m })
+} break
+
+//━━━━━━━━━━━━━━━━━━━━━━━━//
+// GitHub Commands
+case 'git':
+case 'github': {
+if (!text) return reply(`Example: ${prefix}github torvalds`)
+reply(global.mess.wait)
+try {
+let res = await fetch(`https://api.github.com/users/${encodeURIComponent(text)}`)
+let data = await res.json()
+if (data.message) return reply('User not found.')
+let info = `*GitHub Profile:*\n\n👤 Name: ${data.name || data.login}\n📝 Bio: ${data.bio || 'N/A'}\n📍 Location: ${data.location || 'N/A'}\n🏢 Company: ${data.company || 'N/A'}\n📦 Repos: ${data.public_repos}\n👥 Followers: ${data.followers}\n👤 Following: ${data.following}\n🔗 URL: ${data.html_url}\n📅 Joined: ${new Date(data.created_at).toLocaleDateString()}`
+if (data.avatar_url) {
+await X.sendMessage(m.chat, { image: { url: data.avatar_url }, caption: info }, { quoted: m })
+} else reply(info)
+} catch(e) { reply('Error: ' + e.message) }
+} break
+
+case 'repo': {
+if (!text) return reply(`Example: ${prefix}repo user/repo`)
+reply(global.mess.wait)
+try {
+let repoPath = text.includes('/') ? text : text + '/' + text
+let res = await fetch(`https://api.github.com/repos/${encodeURIComponent(repoPath)}`)
+let data = await res.json()
+if (data.message) return reply('Repository not found.')
+reply(`*GitHub Repo:*\n\n📦 ${data.full_name}\n📝 ${data.description || 'No description'}\n⭐ Stars: ${data.stargazers_count}\n🍴 Forks: ${data.forks_count}\n👁️ Watchers: ${data.watchers_count}\n💻 Language: ${data.language || 'N/A'}\n📅 Created: ${new Date(data.created_at).toLocaleDateString()}\n🔗 ${data.html_url}`)
+} catch(e) { reply('Error: ' + e.message) }
+} break
+
+case 'sc':
+case 'script':
+case 'source': {
+reply(`*${global.botname} Source Code*\n\nThis bot is a proprietary product of ${global.ownername}.\nContact: ${global.ownerNumber}\n\n© ${global.ownername} - All Rights Reserved`)
+} break
+
+case 'clone': {
+if (!text) return reply(`Example: ${prefix}clone https://github.com/user/repo`)
+reply(global.mess.wait)
+try {
+let match = text.match(/github\.com\/([^\/]+)\/([^\/\s]+)/)
+if (!match) return reply('Invalid GitHub URL.')
+let [, user, repo] = match
+repo = repo.replace(/\.git$/, '')
+let zipUrl = `https://api.github.com/repos/${user}/${repo}/zipball`
+await X.sendMessage(m.chat, { document: { url: zipUrl }, mimetype: 'application/zip', fileName: `${repo}.zip` }, { quoted: m })
+} catch(e) { reply('Error: ' + e.message) }
+} break
+
 //━━━━━━━━━━━━━━━━━━━━━━━━//
 default:
 if (budy.startsWith('=>')) {
