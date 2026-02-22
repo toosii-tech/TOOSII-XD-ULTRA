@@ -822,21 +822,24 @@ case 'ytplay': {
         if (downloaded && fs.existsSync(tmpFile)) {
             let audioBuffer = fs.readFileSync(tmpFile)
             let cleanName = `${videoAuthor} - ${videoTitle}.mp3`.replace(/[<>:"/\\|?*]/g, '')
+            let thumbBuffer = null
+            try { thumbBuffer = await getBuffer(firstVideo.thumbnail) } catch {}
+            let songInfo = `🎵 *Now Playing*\n\n`
+            songInfo += `📌 *Title:* ${videoTitle}\n`
+            songInfo += `🎤 *Artist:* ${videoAuthor}\n`
+            songInfo += `⏱️ *Duration:* ${firstVideo.timestamp}\n`
+            songInfo += `👁️ *Views:* ${firstVideo.views}\n`
+            songInfo += `🔗 *URL:* ${firstVideo.url}`
+            if (thumbBuffer) {
+                await X.sendMessage(m.chat, { image: thumbBuffer, caption: songInfo }, { quoted: m })
+            } else {
+                await X.sendMessage(m.chat, { text: songInfo }, { quoted: m })
+            }
             await X.sendMessage(m.chat, {
-                document: audioBuffer,
+                audio: audioBuffer,
                 mimetype: 'audio/mpeg',
                 fileName: cleanName,
-                contextInfo: {
-                    externalAdReply: {
-                        showAdAttribution: true,
-                        title: videoTitle,
-                        body: videoAuthor,
-                        sourceUrl: firstVideo.url,
-                        thumbnailUrl: firstVideo.thumbnail || '',
-                        mediaType: 1,
-                        renderLargerThumbnail: true
-                    }
-                }
+                ptt: false
             }, { quoted: m })
             try { fs.unlinkSync(tmpFile) } catch(e) {}
         } else {
