@@ -507,6 +507,11 @@ reply(`bot online ✅`)
 }       
 
 //━━━━━━━━━━━━━━━━━━━━━━━━//
+// Mode Gate: Private mode = only owner can use commands
+if (isCmd && !isOwner && X.public === false) {
+    return
+}
+//━━━━━━━━━━━━━━━━━━━━━━━━//
 // jangan di apa apain
 switch(command) {
 // awas error
@@ -1203,17 +1208,18 @@ break
 
 //━━━━━━━━━━━━━━━━━━━━━━━━//
 // Developer tools
-case 'self': {
+case 'self':
+case 'private': {
 if (!isOwner) return reply(mess.OnlyOwner)
 X.public = false
-reply('Changed to Self Mode')
+reply(`*🔒 Bot Mode: PRIVATE*\n\n🚫 Only the owner can use bot commands.\nOther users will be ignored.`)
 }
 break
 
 case 'public': {
 if (!isOwner) return reply(mess.OnlyOwner)
 X.public = true
-reply('Changed to Public Mode')
+reply(`*⚡ Bot Mode: PUBLIC*\n\n✅ Everyone can use bot commands.\nAll users have access to the bot.`)
 }
 break
 
@@ -3693,9 +3699,16 @@ reply(`*Image Config:*\nMenu Thumb: ${global.menuThumb || global.thumb}\nBot Pic
 case 'mode': {
 if (!isOwner) return reply(mess.OnlyOwner)
 let modeArg = (args[0] || '').toLowerCase()
-if (modeArg === 'public') { X.public = true; reply('*Bot Mode: Public*\nEveryone can use commands.') }
-else if (modeArg === 'self' || modeArg === 'private') { X.public = false; reply('*Bot Mode: Self*\nOnly owner can use commands.') }
-else reply(`*Current Mode:* ${X.public ? 'Public' : 'Self'}\nUsage: ${prefix}mode public/self`)
+if (modeArg === 'public') {
+    X.public = true
+    reply(`*⚡ Bot Mode: PUBLIC*\n\n✅ Everyone can use bot commands.\nAll users have access to the bot.`)
+} else if (modeArg === 'private' || modeArg === 'self') {
+    X.public = false
+    reply(`*🔒 Bot Mode: PRIVATE*\n\n🚫 Only the owner can use bot commands.\nOther users will be ignored.`)
+} else {
+    let currentMode = X.public !== false ? 'PUBLIC ✅' : 'PRIVATE 🔒'
+    reply(`*⚙️ Bot Mode Settings*\n\n📌 Current Mode: *${currentMode}*\n\n*Usage:*\n• ${prefix}mode public — Anyone can use the bot\n• ${prefix}mode private — Only owner can use the bot`)
+}
 } break
 
 // GROUP ADMIN COMMANDS
