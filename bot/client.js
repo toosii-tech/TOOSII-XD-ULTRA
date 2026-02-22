@@ -836,10 +836,9 @@ case 'ytplay': {
                 await X.sendMessage(m.chat, { text: songInfo }, { quoted: m })
             }
             await X.sendMessage(m.chat, {
-                audio: audioBuffer,
+                document: audioBuffer,
                 mimetype: 'audio/mpeg',
-                fileName: cleanName,
-                ptt: false
+                fileName: cleanName
             }, { quoted: m })
             try { fs.unlinkSync(tmpFile) } catch(e) {}
         } else {
