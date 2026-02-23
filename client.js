@@ -1720,36 +1720,39 @@ break
                         case 'add': {
                                 if (!m.isGroup) return reply(mess.OnlyGrup);
                                 if (!isAdmins && !isOwner) return reply(mess.admin);
-                                if (!text && !m.quoted) {
-                                        reply(`_Example :_\n\n ${prefix + command} 62xxx`);
-                                } else {
-                                        const numbersOnly = text ? text.replace(/\D/g, '') + '@s.whatsapp.net' : m.quoted?.sender;
-                                        try {
-                                                await X.groupParticipantsUpdate(m.chat, [numbersOnly], 'add')
-                                                        .then(async (res) => {
-                                                                for (let i of res) {
-                                                                        let invv = await X.groupInviteCode(m.chat);
-                                                                        if (i.status == 408) return reply(`_[ Error ]_ User recently left the group`);
-                                                                        if (i.status == 401) return reply(`_] Error ]_ Bot is blocked by user`);
-                                                                        if (i.status == 409) return reply(`_[ Report ]_ User is already in the group`);
-                                                                        if (i.status == 500) return reply(`_[ Invalid ]_ Group is full`);
-                                                                        if (i.status == 403) {
-                                                                                await X.sendMessage(m.chat, { 
-                                                                                        text: `@${numbersOnly.split('@')[0]} Target cannot be added because their account is private. Sending an invite to their private chat`, 
-                                                                                        mentions: [numbersOnly] 
-                                                                                }, { quoted: m });
-                                                                                await X.sendMessage(numbersOnly, { 
-                                                                                        text: `${'https://chat.whatsapp.com/' + invv}\n━━━━━━━━━━━━━━━━━━━━━\n\nAdmin: wa.me/${m.sender}\n Has Invited You To This Group`, 
-                                                                                        detectLink: true, 
-                                                                                        mentions: [numbersOnly] 
-                                                                                }, { quoted: m }).catch((err) => reply('Failed to send invite! 😔'));
-                                                                        } else {
-                                                                                reply(mess.success);
-                                                                        }
-                                                                }
-                                                        });
-                                        } catch (e) {
-                                                reply('Failed to add user, something went wrong!');
+                                let addTarget = (m.mentionedJid && m.mentionedJid[0]) ? m.mentionedJid[0] : m.quoted ? m.quoted.sender : text ? text.replace(/\D/g, '') + '@s.whatsapp.net' : null;
+                                if (!addTarget) return reply(`*Usage:* ${prefix + command} @user or number\n\nExample: ${prefix + command} 254xxxxxxxxx`);
+                                try {
+                                        let res = await X.groupParticipantsUpdate(m.chat, [addTarget], 'add');
+                                        for (let i of res) {
+                                                let invv;
+                                                try { invv = await X.groupInviteCode(m.chat); } catch {}
+                                                if (i.status == 408) return reply('_[ Error ]_ User recently left the group.');
+                                                if (i.status == 401) return reply('_[ Error ]_ Bot is blocked by user.');
+                                                if (i.status == 409) return reply('_[ Error ]_ User is already in the group.');
+                                                if (i.status == 500) return reply('_[ Error ]_ Group is full.');
+                                                if (i.status == 403) {
+                                                        await X.sendMessage(m.chat, { 
+                                                                text: `@${addTarget.split('@')[0]} cannot be added directly (private account). Sending invite to their DM...`, 
+                                                                mentions: [addTarget] 
+                                                        }, { quoted: m });
+                                                        if (invv) {
+                                                                await X.sendMessage(addTarget, { 
+                                                                        text: `https://chat.whatsapp.com/${invv}\n\nYou've been invited to join this group by an admin.`, 
+                                                                        detectLink: true 
+                                                                }).catch(() => reply('Failed to send invite to their DM.'));
+                                                        }
+                                                } else {
+                                                        let num = addTarget.split('@')[0];
+                                                        X.sendMessage(from, { text: `*@${num} has been added to the group.*`, mentions: [addTarget] }, { quoted: m });
+                                                }
+                                        }
+                                } catch (e) {
+                                        let errMsg = (e?.message || '').toLowerCase();
+                                        if (errMsg.includes('not-authorized') || errMsg.includes('403')) {
+                                                reply('I need to be a group admin to add members.');
+                                        } else {
+                                                reply('Failed to add user: ' + (e.message || 'Unknown error'));
                                         }
                                 }
                         }
@@ -1769,10 +1772,14 @@ break
                                         let num = users.split('@')[0]
                                         X.sendMessage(from, { text: `*@${num} has been removed from the group.*`, mentions: [users] }, { quoted: m })
                                 } catch (err) {
-                                        console.error(err);
-                                        reply(mess.error);
+                                        let errMsg = (err?.message || '').toLowerCase();
+                                        if (errMsg.includes('not-authorized') || errMsg.includes('403')) {
+                                                reply('I need to be a group admin to remove members.');
+                                        } else {
+                                                reply('Failed to remove user: ' + (err.message || 'Unknown error'));
+                                        }
                                 }
-                        };
+                        }
                         break;
 
                         case 'del':
@@ -1816,7 +1823,12 @@ break
                                         warnDb[m.chat] = groupWarn;
                                         fs.writeFileSync(warnDbPath, JSON.stringify(warnDb, null, 2));
                                         X.sendMessage(from, { text: `*@${warnNum} has reached ${maxWarns}/${maxWarns} warnings and has been removed from the group.*\n\nReason: ${warnReason}`, mentions: [warnUser] }, { quoted: m });
-                                    } catch { reply(mess.error); }
+                                    } catch(err) {
+                                        let errMsg = (err?.message || '').toLowerCase();
+                                        if (errMsg.includes('not-authorized') || errMsg.includes('403')) {
+                                            reply('I need to be a group admin to remove warned users.');
+                                        } else { reply(mess.error); }
+                                    }
                                 } else {
                                     X.sendMessage(from, { text: `*Warning ${warnCount}/${maxWarns} for @${warnNum}*\nReason: ${warnReason}\n\n_${maxWarns - warnCount} more warning(s) before removal._`, mentions: [warnUser] }, { quoted: m });
                                 }
