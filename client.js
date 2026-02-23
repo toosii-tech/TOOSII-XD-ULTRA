@@ -81,7 +81,33 @@ const botNum = botNumber.split('@')[0].split(':')[0]
 const ownerNums = [...global.owner].map(v => v.replace(/[^0-9]/g, ''))
 
 const botJid = X.decodeJid(X.user.id)
-const botLid = X.user?.lid ? X.decodeJid(X.user.lid) : null
+let botLidRaw = X.user?.lid || null
+if (!botLidRaw) {
+    try {
+        const _fs = require('fs')
+        const _path = require('path')
+        const phoneNum = (X.user.id || '').split(':')[0].split('@')[0]
+        const credsPaths = [
+            _path.join(__dirname, 'sessions', phoneNum, 'creds.json'),
+            _path.join(__dirname, 'sessions', 'creds.json'),
+            _path.join(__dirname, 'auth_info_baileys', 'creds.json'),
+            _path.join(__dirname, '..', 'sessions', phoneNum, 'creds.json'),
+            _path.join(__dirname, '..', 'sessions', 'creds.json'),
+            _path.join(__dirname, '..', 'auth_info_baileys', 'creds.json'),
+        ]
+        for (const cp of credsPaths) {
+            if (_fs.existsSync(cp)) {
+                const creds = JSON.parse(_fs.readFileSync(cp, 'utf-8'))
+                if (creds?.me?.lid) {
+                    botLidRaw = creds.me.lid
+                    X.user.lid = botLidRaw
+                    break
+                }
+            }
+        }
+    } catch (e) {}
+}
+const botLid = botLidRaw ? X.decodeJid(botLidRaw) : null
 
 const senderJid = m.sender || sender
 const senderFromKey = m.key?.participant ? X.decodeJid(m.key.participant) : null

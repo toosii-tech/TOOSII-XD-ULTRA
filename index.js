@@ -267,6 +267,11 @@ getMessage: async (key) => {
 
 activeSessions.set(phone, { socket: X, status: 'connecting', connectedUser: phone })
 
+if (state?.creds?.me?.lid && X.user && !X.user.lid) {
+    X.user.lid = state.creds.me.lid
+    console.log(`[${phone}] LID pre-loaded from creds: ${X.user.lid}`)
+}
+
 if (X.ws) {
     X.ws.on('error', (err) => {
         console.log(`[${phone}] WebSocket error (handled):`, err.message || err)
@@ -582,6 +587,10 @@ console.log(`[${phone}] Unknown DisconnectReason: ${reason}|${connection}`);
 setTimeout(() => connectSession(phone), 5000);
   }
 } else if (connection === "open") {
+if (!X.user.lid && state?.creds?.me?.lid) {
+    X.user.lid = state.creds.me.lid
+    console.log(`[${phone}] LID loaded from creds: ${X.user.lid}`)
+}
 const connUser = X.user?.id?.split(':')[0] || phone
 activeSessions.set(phone, { socket: X, status: 'connected', connectedUser: connUser })
 try {
@@ -600,7 +609,13 @@ console.log(`[${phone}] Connected: id=${JSON.stringify(X.user.id)} lid=${JSON.st
 }
 });
 
-X.ev.on('creds.update', saveCreds)
+X.ev.on('creds.update', async (update) => {
+    await saveCreds()
+    if (update?.me?.lid && !X.user.lid) {
+        X.user.lid = update.me.lid
+        console.log(`[${phone}] LID updated from creds event: ${X.user.lid}`)
+    }
+})
 
 X.sendText = (jid, text, quoted = '', options) => X.sendMessage(jid, { text: text, ...options }, { quoted })
 
