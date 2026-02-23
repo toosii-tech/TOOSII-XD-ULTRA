@@ -79,47 +79,65 @@ const botNumber = await X.decodeJid(X.user.id)
 const senderNumber = sender.split('@')[0].split(':')[0]
 const botNum = botNumber.split('@')[0].split(':')[0]
 const ownerNums = [...global.owner].map(v => v.replace(/[^0-9]/g, ''))
+
+const botJid = X.decodeJid(X.user.id)
+const botLid = X.user?.lid ? X.decodeJid(X.user.lid) : null
+const botClean = botJid.split(':')[0].split('@')[0]
+const botLidClean = botLid ? botLid.split(':')[0].split('@')[0] : null
+
+const senderJid = m.sender || sender
+const senderFromKey = m.key?.participant ? X.decodeJid(m.key.participant) : null
+const senderClean = senderJid.split(':')[0].split('@')[0]
+const senderKeyClean = senderFromKey ? senderFromKey.split(':')[0].split('@')[0] : null
+
+function matchesJid(participantId, targetJid, targetLid, targetClean, targetLidClean) {
+    if (!participantId) return false
+    const pid = participantId.split(':')[0].split('@')[0]
+    if (pid === targetClean) return true
+    if (participantId === targetJid) return true
+    if (targetLid && (participantId === targetLid || pid === targetLidClean)) return true
+    return false
+}
+
+function matchesSender(participantId) {
+    if (!participantId) return false
+    const pid = participantId.split(':')[0].split('@')[0]
+    if (pid === senderClean) return true
+    if (participantId === senderJid) return true
+    if (senderFromKey && (participantId === senderFromKey || pid === senderKeyClean)) return true
+    if (participantId.endsWith('@lid') && senderFromKey && participantId === senderFromKey) return true
+    if (senderJid.endsWith('@lid') && pid === senderJid.split(':')[0].split('@')[0]) return true
+    return false
+}
+
 const isOwner = (
     m.key.fromMe ||
-    senderNumber === botNum ||
-    ownerNums.includes(senderNumber) ||
-    (m.sender && ownerNums.map(v => v + '@s.whatsapp.net').includes(m.sender)) ||
-    (m.sender && m.sender.split('@')[0].split(':')[0] === botNum) ||
-    (m.key?.participant && X.decodeJid(m.key.participant).split(':')[0].split('@')[0] === botNum) ||
-    (m.key?.participant && ownerNums.includes(X.decodeJid(m.key.participant).split(':')[0].split('@')[0]))
-) || false;
+    senderClean === botClean ||
+    ownerNums.includes(senderClean) ||
+    (senderKeyClean && (senderKeyClean === botClean || ownerNums.includes(senderKeyClean)))
+) || false
+
+const isGroup = m.isGroup
 const pushname = m.pushName || `${senderNumber}`
 const isBot = botNumber.includes(senderNumber)
 const quoted = m.quoted ? m.quoted : m
 const mime = (quoted.msg || quoted).mimetype || ''
-const groupMetadata = m.isGroup ? await X.groupMetadata(from).catch(e => {}) : ''
-const groupName = m.isGroup ? groupMetadata.subject : ''
-const participants = m.isGroup ? await groupMetadata.participants : ''
-const groupAdmins = m.isGroup ? await getGroupAdmins(participants) : ''
-const botLid = X.user?.lid ? X.decodeJid(X.user.lid) : null
-const botNumberClean = botNumber.split(':')[0].split('@')[0]
-const botLidClean = botLid ? botLid.split(':')[0].split('@')[0] : null
-const senderLid = m.key?.participant ? X.decodeJid(m.key.participant) : null
-const senderLidClean = senderLid ? senderLid.split(':')[0].split('@')[0] : null
-const isBotAdmins = m.isGroup ? participants.some(p => {
-    const pid = (p.id || '').split(':')[0].split('@')[0]
-    const isBot = pid === botNumberClean || 
-                  p.id === botNumber || 
-                  (botLid && (p.id === botLid || pid === botLidClean)) ||
-                  (X.user?.id && (p.id === X.user.id || pid === X.user.id.split(':')[0].split('@')[0]))
-    return isBot && (p.admin === 'admin' || p.admin === 'superadmin')
+const groupMetadata = isGroup ? await X.groupMetadata(from).catch(e => {}) : ''
+const groupName = isGroup ? groupMetadata.subject : ''
+const participants = isGroup ? await groupMetadata.participants : ''
+const groupAdmins = isGroup ? await getGroupAdmins(participants) : ''
+
+const isBotAdmins = isGroup ? participants.some(p => {
+    return matchesJid(p.id, botJid, botLid, botClean, botLidClean) && (p.admin === 'admin' || p.admin === 'superadmin')
 }) : false
-const isAdmins = m.isGroup ? (isOwner || participants.some(p => {
-    const pid = (p.id || '').split(':')[0].split('@')[0]
-    const sid = (m.sender || '').split(':')[0].split('@')[0]
-    const pidFull = p.id || ''
-    const match = pid === sid || 
-                  pidFull === m.sender || 
-                  (senderLid && (pidFull === senderLid || pid === senderLidClean)) ||
-                  (pidFull.endsWith('@lid') && senderLid && pidFull === senderLid) ||
-                  (m.sender && m.sender.endsWith('@lid') && pid === m.sender.split(':')[0].split('@')[0])
-    return match && (p.admin === 'admin' || p.admin === 'superadmin')
+
+const isAdmins = isGroup ? (isOwner || participants.some(p => {
+    return matchesSender(p.id) && (p.admin === 'admin' || p.admin === 'superadmin')
 })) : false
+
+const isSuperAdmin = isGroup ? participants.some(p => {
+    return matchesSender(p.id) && p.admin === 'superadmin'
+}) : false
 //━━━━━━━━━━━━━━━━━━━━━━━━//
 // Setting Console
 if (m.message) {
@@ -1808,10 +1826,11 @@ break
                         case 'del':
                         case 'delete': {
                                 if (!m.quoted) return reply(`*Usage:* Reply to a message with ${prefix + command} to delete it.`);
-                                if (m.isGroup && !m.quoted.key.fromMe && !isBotAdmins) return reply('I need to be a group admin to delete other people\'s messages. Please make me admin first.');
+                                let quotedKey = m.quoted.fakeObj ? m.quoted.fakeObj.key : { remoteJid: m.quoted.chat || m.chat, fromMe: m.quoted.fromMe || false, id: m.quoted.id, participant: m.quoted.sender }
+                                if (m.isGroup && !quotedKey.fromMe && !isBotAdmins) return reply('I need to be a group admin to delete other people\'s messages. Please make me admin first.');
                                 try {
-                                        if (m.quoted.key.fromMe || isOwner || (m.isGroup && isAdmins)) {
-                                                await X.sendMessage(m.chat, { delete: m.quoted.key });
+                                        if (quotedKey.fromMe || isOwner || (m.isGroup && isAdmins)) {
+                                                await X.sendMessage(m.chat, { delete: quotedKey });
                                         } else {
                                                 reply('You can only delete bot messages or your own messages (admin required in groups).');
                                         }
