@@ -1720,13 +1720,23 @@ break
                         case 'add': {
                                 if (!m.isGroup) return reply(mess.OnlyGrup);
                                 if (!isAdmins && !isOwner) return reply(mess.admin);
-                                let addTarget = (m.mentionedJid && m.mentionedJid[0]) ? m.mentionedJid[0] : m.quoted ? m.quoted.sender : text ? text.replace(/\D/g, '') + '@s.whatsapp.net' : null;
+                                let addTarget = null;
+                                if (m.mentionedJid && m.mentionedJid[0]) {
+                                        addTarget = m.mentionedJid[0];
+                                } else if (m.quoted) {
+                                        if (m.quoted.sender) {
+                                                addTarget = m.quoted.sender;
+                                        } else {
+                                                let vcardMatch = (m.quoted.text || JSON.stringify(m.quoted.message || '')).match(/waid=(\d+)|TEL[;:][^:]*:[\+]?(\d+)/);
+                                                if (vcardMatch) addTarget = (vcardMatch[1] || vcardMatch[2]) + '@s.whatsapp.net';
+                                        }
+                                } else if (text) {
+                                        addTarget = text.replace(/\D/g, '') + '@s.whatsapp.net';
+                                }
                                 if (!addTarget) return reply(`*Usage:* ${prefix + command} @user or number\n\nExample: ${prefix + command} 254xxxxxxxxx`);
                                 try {
                                         let res = await X.groupParticipantsUpdate(m.chat, [addTarget], 'add');
                                         for (let i of res) {
-                                                let invv;
-                                                try { invv = await X.groupInviteCode(m.chat); } catch {}
                                                 if (i.status == 408) return reply('_[ Error ]_ User recently left the group.');
                                                 if (i.status == 401) return reply('_[ Error ]_ Bot is blocked by user.');
                                                 if (i.status == 409) return reply('_[ Error ]_ User is already in the group.');
@@ -1736,12 +1746,13 @@ break
                                                                 text: `@${addTarget.split('@')[0]} cannot be added directly (private account). Sending invite to their DM...`, 
                                                                 mentions: [addTarget] 
                                                         }, { quoted: m });
-                                                        if (invv) {
+                                                        try {
+                                                                let invv = await X.groupInviteCode(m.chat);
                                                                 await X.sendMessage(addTarget, { 
                                                                         text: `https://chat.whatsapp.com/${invv}\n\nYou've been invited to join this group by an admin.`, 
                                                                         detectLink: true 
                                                                 }).catch(() => reply('Failed to send invite to their DM.'));
-                                                        }
+                                                        } catch { reply('Could not get group invite link to send. Make sure bot is admin.'); }
                                                 } else {
                                                         let num = addTarget.split('@')[0];
                                                         X.sendMessage(from, { text: `*@${num} has been added to the group.*`, mentions: [addTarget] }, { quoted: m });
