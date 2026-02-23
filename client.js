@@ -1803,7 +1803,7 @@ break
                         case 'add': {
                                 if (!m.isGroup) return reply(mess.OnlyGrup);
                                 if (!isAdmins && !isOwner) return reply(mess.admin);
-                                if (!isBotAdmins) return reply('I need to be a group admin to add members. Please make me admin first.');
+                                if (!isBotAdmins) return reply(mess.botAdmin);
                                 let addTarget = null;
                                 if (m.mentionedJid && m.mentionedJid[0]) {
                                         addTarget = m.mentionedJid[0];
@@ -1817,37 +1817,38 @@ break
                                 } else if (text) {
                                         addTarget = text.replace(/\D/g, '') + '@s.whatsapp.net';
                                 }
-                                if (!addTarget) return reply(`*Usage:* ${prefix + command} @user or number\n\nExample: ${prefix + command} 254xxxxxxxxx`);
+                                if (!addTarget) return reply(`📌 *Usage:* ${prefix + command} @user or number\n\n_Example: ${prefix + command} 254xxxxxxxxx_`);
                                 try {
                                         let res = await X.groupParticipantsUpdate(m.chat, [addTarget], 'add');
                                         for (let i of res) {
-                                                if (i.status == 408) return reply('_[ Error ]_ User recently left the group.');
-                                                if (i.status == 401) return reply('_[ Error ]_ Bot is blocked by user.');
-                                                if (i.status == 409) return reply('_[ Error ]_ User is already in the group.');
-                                                if (i.status == 500) return reply('_[ Error ]_ Group is full.');
+                                                if (i.status == 408) return reply('⏳ User recently left the group. Try again later.');
+                                                if (i.status == 401) return reply('🚫 Bot is blocked by this user.');
+                                                if (i.status == 409) return reply('ℹ️ User is already in the group.');
+                                                if (i.status == 500) return reply('📛 Group is full.');
                                                 if (i.status == 403) {
+                                                        let addNum = addTarget.split('@')[0]
                                                         await X.sendMessage(m.chat, { 
-                                                                text: `@${addTarget.split('@')[0]} cannot be added directly (private account). Sending invite to their DM...`, 
+                                                                text: `🔒 @${addNum} has a private account. Sending invite to their DM...`, 
                                                                 mentions: [addTarget] 
                                                         }, { quoted: m });
                                                         try {
                                                                 let invv = await X.groupInviteCode(m.chat);
                                                                 await X.sendMessage(addTarget, { 
-                                                                        text: `https://chat.whatsapp.com/${invv}\n\nYou've been invited to join this group by an admin.`, 
+                                                                        text: `https://chat.whatsapp.com/${invv}\n\n📨 You've been invited to join this group by an admin.`, 
                                                                         detectLink: true 
-                                                                }).catch(() => reply('Failed to send invite to their DM.'));
-                                                        } catch { reply('Could not get group invite link to send. Make sure bot is admin.'); }
+                                                                }).catch(() => reply('❌ Failed to send invite to their DM.'));
+                                                        } catch { reply('❌ Could not get group invite link.'); }
                                                 } else {
-                                                        let num = addTarget.split('@')[0];
-                                                        X.sendMessage(from, { text: `*@${num} has been added to the group.*`, mentions: [addTarget] }, { quoted: m });
+                                                        let addNum = addTarget.split('@')[0];
+                                                        X.sendMessage(from, { text: `✅ *@${addNum} has been added to the group.*`, mentions: [addTarget] }, { quoted: m });
                                                 }
                                         }
                                 } catch (e) {
                                         let errMsg = (e?.message || '').toLowerCase();
                                         if (errMsg.includes('not-authorized') || errMsg.includes('403')) {
-                                                reply('I need to be a group admin to add members.');
+                                                reply(mess.botAdmin);
                                         } else {
-                                                reply('Failed to add user: ' + (e.message || 'Unknown error'));
+                                                reply('❌ Failed to add user: ' + (e.message || 'Unknown error'));
                                         }
                                 }
                         }
@@ -1857,22 +1858,21 @@ break
                         case 'remove': {
                                 if (!m.isGroup) return reply(mess.OnlyGrup);
                                 if (!isOwner && !isAdmins) return reply(mess.admin);
-                                if (!isBotAdmins) return reply('I need to be a group admin to remove members. Please make me admin first.');
-                                let users = (m.mentionedJid && m.mentionedJid[0]) ? m.mentionedJid[0] : m.quoted ? m.quoted.sender : text ? text.replace(/[^0-9]/g, '') + '@s.whatsapp.net' : null;
-                                if (!users) return reply(`*Usage:* ${prefix + command} @user or reply to their message`);
-                                if (owner.includes(users.replace('@s.whatsapp.net', ''))) {
-                                        return reply('Cannot remove the bot owner.');
-                                }
+                                if (!isBotAdmins) return reply(mess.botAdmin);
+                                let kickTarget = (m.mentionedJid && m.mentionedJid[0]) ? m.mentionedJid[0] : m.quoted ? m.quoted.sender : text ? text.replace(/[^0-9]/g, '') + '@s.whatsapp.net' : null;
+                                if (!kickTarget) return reply(`📌 *Usage:* ${prefix + command} @user or reply to their message`);
+                                let kickNum = kickTarget.split('@')[0]
+                                let isTargetOwner = owner.some(o => kickTarget.includes(o)) || (typeof X.areJidsSameUser === 'function' && owner.some(o => X.areJidsSameUser(kickTarget, o + '@s.whatsapp.net')))
+                                if (isTargetOwner) return reply('🛡️ Cannot remove the bot owner.');
                                 try {
-                                        await X.groupParticipantsUpdate(m.chat, [users], 'remove');
-                                        let num = users.split('@')[0]
-                                        X.sendMessage(from, { text: `*@${num} has been removed from the group.*`, mentions: [users] }, { quoted: m })
+                                        await X.groupParticipantsUpdate(m.chat, [kickTarget], 'remove');
+                                        X.sendMessage(from, { text: `🚪 *@${kickNum} has been removed from the group.*`, mentions: [kickTarget] }, { quoted: m })
                                 } catch (err) {
                                         let errMsg = (err?.message || '').toLowerCase();
                                         if (errMsg.includes('not-authorized') || errMsg.includes('403')) {
-                                                reply('I need to be a group admin to remove members.');
+                                                reply(mess.botAdmin);
                                         } else {
-                                                reply('Failed to remove user: ' + (err.message || 'Unknown error'));
+                                                reply('❌ Failed to remove user: ' + (err.message || 'Unknown error'));
                                         }
                                 }
                         }
@@ -1903,10 +1903,11 @@ break
                         case 'warn': {
                                 if (!m.isGroup) return reply(mess.OnlyGrup);
                                 if (!isOwner && !isAdmins) return reply(mess.admin);
-                                if (!isBotAdmins) return reply('I need to be a group admin to warn and remove users. Please make me admin first.');
+                                if (!isBotAdmins) return reply(mess.botAdmin);
                                 let warnUser = (m.mentionedJid && m.mentionedJid[0]) ? m.mentionedJid[0] : m.quoted ? m.quoted.sender : text ? text.replace(/[^0-9]/g, '') + '@s.whatsapp.net' : null;
-                                if (!warnUser) return reply(`*Usage:* ${prefix}warn @user [reason]\nReply to a message or mention someone.`);
-                                if (owner.includes(warnUser.replace('@s.whatsapp.net', ''))) return reply('Cannot warn the bot owner.');
+                                if (!warnUser) return reply(`📌 *Usage:* ${prefix}warn @user [reason]\n_Reply to a message or mention someone._`);
+                                let isWarnOwner = owner.some(o => warnUser.includes(o)) || (typeof X.areJidsSameUser === 'function' && owner.some(o => X.areJidsSameUser(warnUser, o + '@s.whatsapp.net')))
+                                if (isWarnOwner) return reply('🛡️ Cannot warn the bot owner.');
                                 let warnReason = args.slice(m.mentionedJid && m.mentionedJid[0] ? 1 : 0).join(' ') || 'No reason given';
                                 let warnDbPath = path.join(__dirname, 'database', 'warnings.json');
                                 let warnDb = {};
@@ -1926,15 +1927,15 @@ break
                                         groupWarn[warnUser] = [];
                                         warnDb[m.chat] = groupWarn;
                                         fs.writeFileSync(warnDbPath, JSON.stringify(warnDb, null, 2));
-                                        X.sendMessage(from, { text: `*@${warnNum} has reached ${maxWarns}/${maxWarns} warnings and has been removed from the group.*\n\nReason: ${warnReason}`, mentions: [warnUser] }, { quoted: m });
+                                        X.sendMessage(from, { text: `🚨 *@${warnNum} has reached ${maxWarns}/${maxWarns} warnings and has been removed!*\n\n📝 Reason: ${warnReason}`, mentions: [warnUser] }, { quoted: m });
                                     } catch(err) {
                                         let errMsg = (err?.message || '').toLowerCase();
                                         if (errMsg.includes('not-authorized') || errMsg.includes('403')) {
-                                            reply('I need to be a group admin to remove warned users.');
+                                            reply(mess.botAdmin);
                                         } else { reply(mess.error); }
                                     }
                                 } else {
-                                    X.sendMessage(from, { text: `*Warning ${warnCount}/${maxWarns} for @${warnNum}*\nReason: ${warnReason}\n\n_${maxWarns - warnCount} more warning(s) before removal._`, mentions: [warnUser] }, { quoted: m });
+                                    X.sendMessage(from, { text: `⚠️ *Warning ${warnCount}/${maxWarns} for @${warnNum}*\n📝 Reason: ${warnReason}\n\n_${maxWarns - warnCount} more warning(s) before removal._`, mentions: [warnUser] }, { quoted: m });
                                 }
                         }
                         break;
@@ -1944,7 +1945,7 @@ break
                                 if (!m.isGroup) return reply(mess.OnlyGrup);
                                 if (!isOwner && !isAdmins) return reply(mess.admin);
                                 let uwUser = (m.mentionedJid && m.mentionedJid[0]) ? m.mentionedJid[0] : m.quoted ? m.quoted.sender : text ? text.replace(/[^0-9]/g, '') + '@s.whatsapp.net' : null;
-                                if (!uwUser) return reply(`*Usage:* ${prefix}unwarn @user\nReply to a message or mention someone.`);
+                                if (!uwUser) return reply(`📌 *Usage:* ${prefix}unwarn @user\n_Reply to a message or mention someone._`);
                                 let uwDbPath = path.join(__dirname, 'database', 'warnings.json');
                                 let uwDb = {};
                                 try { uwDb = JSON.parse(fs.readFileSync(uwDbPath, 'utf-8')); } catch { uwDb = {}; }
@@ -1952,9 +1953,9 @@ break
                                     uwDb[m.chat][uwUser] = [];
                                     fs.writeFileSync(uwDbPath, JSON.stringify(uwDb, null, 2));
                                     let uwNum = uwUser.split('@')[0];
-                                    X.sendMessage(from, { text: `*Warnings cleared for @${uwNum}.*`, mentions: [uwUser] }, { quoted: m });
+                                    X.sendMessage(from, { text: `✅ *Warnings cleared for @${uwNum}.*`, mentions: [uwUser] }, { quoted: m });
                                 } else {
-                                    reply('This user has no warnings.');
+                                    reply('ℹ️ This user has no warnings.');
                                 }
                         }
                         break;
@@ -1968,36 +1969,37 @@ break
                                 try { wlDb = JSON.parse(fs.readFileSync(wlDbPath, 'utf-8')); } catch { wlDb = {}; }
                                 let groupWarns = wlDb[m.chat] || {};
                                 let warnEntries = Object.entries(groupWarns).filter(([, w]) => w.length > 0);
-                                if (warnEntries.length === 0) return reply('No warnings in this group.');
-                                let warnListText = `*Group Warnings*\n\n`;
+                                if (warnEntries.length === 0) return reply('ℹ️ No warnings in this group.');
+                                let warnListText = `╭━━━〔 ⚠️ *GROUP WARNINGS* 〕━━━╮\n│\n`;
                                 let warnMentions = [];
                                 for (let [jid, warns] of warnEntries) {
                                     let num = jid.split('@')[0];
                                     warnMentions.push(jid);
-                                    warnListText += `@${num} - ${warns.length}/3 warnings\n`;
+                                    warnListText += `│ 👤 @${num} — *${warns.length}/3*\n`;
                                     warns.forEach((w, i) => {
-                                        warnListText += `  ${i + 1}. ${w.reason} (${new Date(w.time).toLocaleDateString()})\n`;
+                                        warnListText += `│   ${i + 1}. ${w.reason} _(${new Date(w.time).toLocaleDateString()})_\n`;
                                     });
-                                    warnListText += '\n';
+                                    warnListText += `│\n`;
                                 }
-                                X.sendMessage(from, { text: warnListText.trim(), mentions: warnMentions }, { quoted: m });
+                                warnListText += `╰━━━━━━━━━━━━━━━━━╯`
+                                X.sendMessage(from, { text: warnListText, mentions: warnMentions }, { quoted: m });
                         }
                         break;
 
                         case 'promote': {
                                 if (!m.isGroup) return reply(mess.OnlyGrup)
                                 if (!isOwner && !isAdmins) return reply(mess.admin)
-                                if (!isBotAdmins) return reply('I need to be a group admin to promote members. Please make me admin first.')
-                                let users = (m.mentionedJid && m.mentionedJid[0]) ? m.mentionedJid[0] : m.quoted ? m.quoted.sender : text ? text.replace(/[^0-9]/g, '') + '@s.whatsapp.net' : null
-                                if (!users) return reply(`*Example:* ${prefix + command} @user or reply to their message`)
+                                if (!isBotAdmins) return reply(mess.botAdmin)
+                                let promoteTarget = (m.mentionedJid && m.mentionedJid[0]) ? m.mentionedJid[0] : m.quoted ? m.quoted.sender : text ? text.replace(/[^0-9]/g, '') + '@s.whatsapp.net' : null
+                                if (!promoteTarget) return reply(`📌 *Usage:* ${prefix + command} @user or reply to their message`)
                                 try {
-                                    await X.groupParticipantsUpdate(m.chat, [users], 'promote')
-                                    let num = users.split('@')[0]
-                                    X.sendMessage(from, { text: `*✅ @${num} has been promoted to admin!*`, mentions: [users] }, { quoted: m })
+                                    await X.groupParticipantsUpdate(m.chat, [promoteTarget], 'promote')
+                                    let promoteNum = promoteTarget.split('@')[0]
+                                    X.sendMessage(from, { text: `⬆️ *@${promoteNum} has been promoted to admin!*`, mentions: [promoteTarget] }, { quoted: m })
                                 } catch(err) {
                                     let errMsg = (err?.message || err || '').toString().toLowerCase()
                                     if (errMsg.includes('not-authorized') || errMsg.includes('403') || errMsg.includes('admin')) {
-                                        reply('🤖 I need to be a group admin to promote members. Please make me admin first.')
+                                        reply(mess.botAdmin)
                                     } else {
                                         reply(mess.error)
                                     }
@@ -2008,17 +2010,19 @@ break
                         case 'demote': {
                                 if (!m.isGroup) return reply(mess.OnlyGrup)
                                 if (!isOwner && !isAdmins) return reply(mess.admin)
-                                if (!isBotAdmins) return reply('I need to be a group admin to demote members. Please make me admin first.')
-                                let users = (m.mentionedJid && m.mentionedJid[0]) ? m.mentionedJid[0] : m.quoted ? m.quoted.sender : text ? text.replace(/[^0-9]/g, '') + '@s.whatsapp.net' : null
-                                if (!users) return reply(`*Example:* ${prefix + command} @user or reply to their message`)
+                                if (!isBotAdmins) return reply(mess.botAdmin)
+                                let demoteTarget = (m.mentionedJid && m.mentionedJid[0]) ? m.mentionedJid[0] : m.quoted ? m.quoted.sender : text ? text.replace(/[^0-9]/g, '') + '@s.whatsapp.net' : null
+                                if (!demoteTarget) return reply(`📌 *Usage:* ${prefix + command} @user or reply to their message`)
+                                let demoteNum = demoteTarget.split('@')[0]
+                                let isDemoteOwner = owner.some(o => demoteTarget.includes(o)) || (typeof X.areJidsSameUser === 'function' && owner.some(o => X.areJidsSameUser(demoteTarget, o + '@s.whatsapp.net')))
+                                if (isDemoteOwner) return reply('🛡️ Cannot demote the bot owner.')
                                 try {
-                                    await X.groupParticipantsUpdate(m.chat, [users], 'demote')
-                                    let num = users.split('@')[0]
-                                    X.sendMessage(from, { text: `*✅ @${num} has been demoted from admin.*`, mentions: [users] }, { quoted: m })
+                                    await X.groupParticipantsUpdate(m.chat, [demoteTarget], 'demote')
+                                    X.sendMessage(from, { text: `⬇️ *@${demoteNum} has been demoted from admin.*`, mentions: [demoteTarget] }, { quoted: m })
                                 } catch(err) {
                                     let errMsg = (err?.message || err || '').toString().toLowerCase()
                                     if (errMsg.includes('not-authorized') || errMsg.includes('403') || errMsg.includes('admin')) {
-                                        reply('🤖 I need to be a group admin to demote members. Please make me admin first.')
+                                        reply(mess.botAdmin)
                                     } else {
                                         reply(mess.error)
                                     }
@@ -2029,13 +2033,13 @@ break
                         case 'revoke':{
                                 if (!m.isGroup) return reply(mess.OnlyGrup);
                                 if (!isAdmins && !isOwner) return reply(mess.admin);
-                                if (!isBotAdmins) return reply('I need to be a group admin to do this. Please make me admin first.');
+                                if (!isBotAdmins) return reply(mess.botAdmin);
                                 try {
                                     await X.groupRevokeInvite(m.chat)
-                                    reply(mess.success)
+                                    reply('✅ *Group invite link has been revoked.*')
                                 } catch(err) {
                                     let errMsg = (err?.message || '').toLowerCase()
-                                    if (errMsg.includes('not-authorized') || errMsg.includes('403')) reply('I need to be a group admin to do this.')
+                                    if (errMsg.includes('not-authorized') || errMsg.includes('403')) reply(mess.botAdmin)
                                     else reply(mess.error)
                                 }
                                 }
@@ -2045,28 +2049,28 @@ break
                         case 'acceptjoin': {
                                 if (!m.isGroup) return reply(mess.OnlyGrup)
                                 if (!isAdmins && !isOwner) return reply(mess.admin)
-                                if (!isBotAdmins) return reply('I need to be a group admin to approve join requests. Please make me admin first.')
+                                if (!isBotAdmins) return reply(mess.botAdmin)
                                 try {
                                         let pending = await X.groupRequestParticipantsList(m.chat)
-                                        if (!pending || pending.length === 0) return reply('No pending join requests.')
+                                        if (!pending || pending.length === 0) return reply('ℹ️ No pending join requests.')
                                         if (text && text.toLowerCase() === 'all') {
                                                 let jids = pending.map(p => p.jid)
                                                 await X.groupRequestParticipantsUpdate(m.chat, jids, 'approve')
-                                                reply(`Approved all *${jids.length}* pending join request(s).`)
+                                                reply(`✅ *Approved all ${jids.length} pending join request(s).*`)
                                         } else if (text) {
                                                 let target = text.replace(/[^0-9]/g, '') + '@s.whatsapp.net'
                                                 let found = pending.find(p => p.jid === target)
-                                                if (!found) return reply(`That number is not in the pending requests.\n\nPending: ${pending.map(p => p.jid.split('@')[0]).join(', ')}`)
+                                                if (!found) return reply(`❌ That number is not in the pending requests.\n\n📋 Pending: ${pending.map(p => p.jid.split('@')[0]).join(', ')}`)
                                                 await X.groupRequestParticipantsUpdate(m.chat, [target], 'approve')
-                                                reply(`Approved @${target.split('@')[0]}`)
+                                                reply(`✅ *Approved @${target.split('@')[0]}*`)
                                         } else {
-                                                let list = pending.map((p, i) => `${i + 1}. ${p.jid.split('@')[0]}`).join('\n')
-                                                reply(`*Pending Join Requests (${pending.length}):*\n\n${list}\n\n*Usage:*\n• ${prefix}approve all - Approve everyone\n• ${prefix}approve [number] - Approve specific\n• ${prefix}reject all - Reject everyone\n• ${prefix}reject [number] - Reject specific`)
+                                                let list = pending.map((p, i) => `│ ${i + 1}. ${p.jid.split('@')[0]}`).join('\n')
+                                                reply(`╭━━━〔 📋 *PENDING REQUESTS* 〕━━━╮\n│\n│ Total: *${pending.length}*\n│\n${list}\n│\n╰━━━━━━━━━━━━━━━━━╯\n\n📌 *Usage:*\n• ${prefix}approve all\n• ${prefix}approve [number]\n• ${prefix}reject all\n• ${prefix}reject [number]`)
                                         }
                                 } catch (err) {
                                         let errMsg = (err?.message || '').toLowerCase()
-                                        if (errMsg.includes('not-authorized') || errMsg.includes('403')) reply('I need to be a group admin to approve join requests.')
-                                        else reply('Failed to process join requests: ' + (err.message || 'Unknown error'))
+                                        if (errMsg.includes('not-authorized') || errMsg.includes('403')) reply(mess.botAdmin)
+                                        else reply('❌ Failed: ' + (err.message || 'Unknown error'))
                                 }
                         }
                         break
@@ -2075,28 +2079,28 @@ break
                         case 'rejectjoin': {
                                 if (!m.isGroup) return reply(mess.OnlyGrup)
                                 if (!isAdmins && !isOwner) return reply(mess.admin)
-                                if (!isBotAdmins) return reply('I need to be a group admin to reject join requests. Please make me admin first.')
+                                if (!isBotAdmins) return reply(mess.botAdmin)
                                 try {
                                         let pending = await X.groupRequestParticipantsList(m.chat)
-                                        if (!pending || pending.length === 0) return reply('No pending join requests.')
+                                        if (!pending || pending.length === 0) return reply('ℹ️ No pending join requests.')
                                         if (text && text.toLowerCase() === 'all') {
                                                 let jids = pending.map(p => p.jid)
                                                 await X.groupRequestParticipantsUpdate(m.chat, jids, 'reject')
-                                                reply(`Rejected all *${jids.length}* pending join request(s).`)
+                                                reply(`✅ *Rejected all ${jids.length} pending join request(s).*`)
                                         } else if (text) {
                                                 let target = text.replace(/[^0-9]/g, '') + '@s.whatsapp.net'
                                                 let found = pending.find(p => p.jid === target)
-                                                if (!found) return reply(`That number is not in the pending requests.`)
+                                                if (!found) return reply(`❌ That number is not in the pending requests.`)
                                                 await X.groupRequestParticipantsUpdate(m.chat, [target], 'reject')
-                                                reply(`Rejected @${target.split('@')[0]}`)
+                                                reply(`✅ *Rejected @${target.split('@')[0]}*`)
                                         } else {
                                                 let list = pending.map((p, i) => `${i + 1}. ${p.jid.split('@')[0]}`).join('\n')
-                                                reply(`*Pending Join Requests (${pending.length}):*\n\n${list}\n\nUse ${prefix}reject all or ${prefix}reject [number]`)
+                                                reply(`📋 *Pending Join Requests (${pending.length}):*\n\n${list}\n\n📌 Use ${prefix}reject all or ${prefix}reject [number]`)
                                         }
                                 } catch (err) {
                                         let errMsg = (err?.message || '').toLowerCase()
-                                        if (errMsg.includes('not-authorized') || errMsg.includes('403')) reply('I need to be a group admin to reject join requests.')
-                                        else reply('Failed to process join requests: ' + (err.message || 'Unknown error'))
+                                        if (errMsg.includes('not-authorized') || errMsg.includes('403')) reply(mess.botAdmin)
+                                        else reply('❌ Failed: ' + (err.message || 'Unknown error'))
                                 }
                         }
                         break
@@ -3599,13 +3603,13 @@ if (modeArg === 'public') {
 case 'mute': {
 if (!m.isGroup) return reply(mess.OnlyGrup)
 if (!isAdmins && !isOwner) return reply(mess.admin)
-if (!isBotAdmins) return reply('I need to be a group admin to mute the group. Please make me admin first.')
+if (!isBotAdmins) return reply(mess.botAdmin)
 try {
 await X.groupSettingUpdate(m.chat, 'announcement')
-reply('*Group muted.* Only admins can send messages.')
+reply('🔇 *Group muted.* Only admins can send messages.')
 } catch(err) {
 let errMsg = (err?.message || '').toLowerCase()
-if (errMsg.includes('not-authorized') || errMsg.includes('403')) reply('I need to be a group admin to do this.')
+if (errMsg.includes('not-authorized') || errMsg.includes('403')) reply(mess.botAdmin)
 else reply(mess.error)
 }
 } break
@@ -3613,13 +3617,13 @@ else reply(mess.error)
 case 'unmute': {
 if (!m.isGroup) return reply(mess.OnlyGrup)
 if (!isAdmins && !isOwner) return reply(mess.admin)
-if (!isBotAdmins) return reply('I need to be a group admin to unmute the group. Please make me admin first.')
+if (!isBotAdmins) return reply(mess.botAdmin)
 try {
 await X.groupSettingUpdate(m.chat, 'not_announcement')
-reply('*Group unmuted.* Everyone can send messages.')
+reply('🔊 *Group unmuted.* Everyone can send messages.')
 } catch(err) {
 let errMsg = (err?.message || '').toLowerCase()
-if (errMsg.includes('not-authorized') || errMsg.includes('403')) reply('I need to be a group admin to do this.')
+if (errMsg.includes('not-authorized') || errMsg.includes('403')) reply(mess.botAdmin)
 else reply(mess.error)
 }
 } break
@@ -3628,71 +3632,73 @@ case 'ban': {
 if (!m.isGroup) return reply(mess.OnlyGrup)
 if (!isAdmins && !isOwner) return reply(mess.admin)
 let banUser = (m.mentionedJid && m.mentionedJid[0]) ? m.mentionedJid[0] : m.quoted ? m.quoted.sender : text ? text.replace(/[^0-9]/g, '') + '@s.whatsapp.net' : null
-if (!banUser) return reply(`Usage: ${prefix}ban @user`)
-let users = loadUsers()
-if (!users[banUser]) users[banUser] = { name: banUser.split('@')[0], firstSeen: new Date().toISOString(), lastSeen: new Date().toISOString(), commandCount: 0, commands: {} }
-users[banUser].banned = true
-saveUsers(users)
-X.sendMessage(from, { text: `*@${banUser.split('@')[0]} has been banned from using the bot.*`, mentions: [banUser] }, { quoted: m })
+if (!banUser) return reply(`📌 *Usage:* ${prefix}ban @user`)
+let isBanOwner = owner.some(o => banUser.includes(o)) || (typeof X.areJidsSameUser === 'function' && owner.some(o => X.areJidsSameUser(banUser, o + '@s.whatsapp.net')))
+if (isBanOwner) return reply('🛡️ Cannot ban the bot owner.')
+let banUsers = loadUsers()
+if (!banUsers[banUser]) banUsers[banUser] = { name: banUser.split('@')[0], firstSeen: new Date().toISOString(), lastSeen: new Date().toISOString(), commandCount: 0, commands: {} }
+banUsers[banUser].banned = true
+saveUsers(banUsers)
+X.sendMessage(from, { text: `🚫 *@${banUser.split('@')[0]} has been banned from using the bot.*`, mentions: [banUser] }, { quoted: m })
 } break
 
 case 'unban': {
 if (!m.isGroup) return reply(mess.OnlyGrup)
 if (!isAdmins && !isOwner) return reply(mess.admin)
 let unbanUser = (m.mentionedJid && m.mentionedJid[0]) ? m.mentionedJid[0] : m.quoted ? m.quoted.sender : text ? text.replace(/[^0-9]/g, '') + '@s.whatsapp.net' : null
-if (!unbanUser) return reply(`Usage: ${prefix}unban @user`)
+if (!unbanUser) return reply(`📌 *Usage:* ${prefix}unban @user`)
 let usersDb = loadUsers()
 if (usersDb[unbanUser]) { usersDb[unbanUser].banned = false; saveUsers(usersDb) }
-X.sendMessage(from, { text: `*@${unbanUser.split('@')[0]} has been unbanned.*`, mentions: [unbanUser] }, { quoted: m })
+X.sendMessage(from, { text: `✅ *@${unbanUser.split('@')[0]} has been unbanned.*`, mentions: [unbanUser] }, { quoted: m })
 } break
 
 case 'antibadword': {
 if (!m.isGroup) return reply(mess.OnlyGrup)
 if (!isAdmins && !isOwner) return reply(mess.admin)
 let abwArg = (args[0] || '').toLowerCase()
-if (abwArg === 'on') { global.antiBadword = true; reply('*Anti Badword ON*') }
-else if (abwArg === 'off') { global.antiBadword = false; reply('*Anti Badword OFF*') }
-else reply(`*Anti Badword: ${global.antiBadword ? 'ON' : 'OFF'}*\nUsage: ${prefix}antibadword on/off`)
+if (abwArg === 'on') { global.antiBadword = true; reply('🛡️ *Anti Badword ON* — Bad words will be detected.') }
+else if (abwArg === 'off') { global.antiBadword = false; reply('❌ *Anti Badword OFF*') }
+else reply(`🛡️ *Anti Badword: ${global.antiBadword ? '✅ ON' : '❌ OFF'}*\n\n📌 Usage: ${prefix}antibadword on/off`)
 } break
 
 case 'antitag': {
 if (!m.isGroup) return reply(mess.OnlyGrup)
 if (!isAdmins && !isOwner) return reply(mess.admin)
 let atgArg = (args[0] || '').toLowerCase()
-if (atgArg === 'on') { global.antiTag = true; reply('*Anti Tag ON*\nMass tagging will be detected.') }
-else if (atgArg === 'off') { global.antiTag = false; reply('*Anti Tag OFF*') }
-else reply(`*Anti Tag: ${global.antiTag ? 'ON' : 'OFF'}*\nUsage: ${prefix}antitag on/off`)
+if (atgArg === 'on') { global.antiTag = true; reply('🛡️ *Anti Tag ON* — Mass tagging will be detected.') }
+else if (atgArg === 'off') { global.antiTag = false; reply('❌ *Anti Tag OFF*') }
+else reply(`🛡️ *Anti Tag: ${global.antiTag ? '✅ ON' : '❌ OFF'}*\n\n📌 Usage: ${prefix}antitag on/off`)
 } break
 
 case 'antisticker': {
 if (!m.isGroup) return reply(mess.OnlyGrup)
 if (!isAdmins && !isOwner) return reply(mess.admin)
 let asArg = (args[0] || '').toLowerCase()
-if (asArg === 'on') { global.antiSticker = true; reply('*Anti Sticker ON*') }
-else if (asArg === 'off') { global.antiSticker = false; reply('*Anti Sticker OFF*') }
-else reply(`*Anti Sticker: ${global.antiSticker ? 'ON' : 'OFF'}*\nUsage: ${prefix}antisticker on/off`)
+if (asArg === 'on') { global.antiSticker = true; reply('🛡️ *Anti Sticker ON* — Stickers will be deleted.') }
+else if (asArg === 'off') { global.antiSticker = false; reply('❌ *Anti Sticker OFF*') }
+else reply(`🛡️ *Anti Sticker: ${global.antiSticker ? '✅ ON' : '❌ OFF'}*\n\n📌 Usage: ${prefix}antisticker on/off`)
 } break
 
 case 'antidemote': {
 if (!m.isGroup) return reply(mess.OnlyGrup)
 if (!isAdmins && !isOwner) return reply(mess.admin)
 let adArg2 = (args[0] || '').toLowerCase()
-if (adArg2 === 'on') { global.antiDemote = true; reply('*Anti Demote ON*\nDemoted admins will be re-promoted.') }
-else if (adArg2 === 'off') { global.antiDemote = false; reply('*Anti Demote OFF*') }
-else reply(`*Anti Demote: ${global.antiDemote ? 'ON' : 'OFF'}*\nUsage: ${prefix}antidemote on/off`)
+if (adArg2 === 'on') { global.antiDemote = true; reply('🛡️ *Anti Demote ON* — Demoted admins will be re-promoted.') }
+else if (adArg2 === 'off') { global.antiDemote = false; reply('❌ *Anti Demote OFF*') }
+else reply(`🛡️ *Anti Demote: ${global.antiDemote ? '✅ ON' : '❌ OFF'}*\n\n📌 Usage: ${prefix}antidemote on/off`)
 } break
 
 case 'setgdesc': {
 if (!m.isGroup) return reply(mess.OnlyGrup)
 if (!isAdmins && !isOwner) return reply(mess.admin)
-if (!isBotAdmins) return reply('I need to be a group admin to change the description. Please make me admin first.')
-if (!text) return reply(`Usage: ${prefix}setgdesc [new description]`)
+if (!isBotAdmins) return reply(mess.botAdmin)
+if (!text) return reply(`📌 *Usage:* ${prefix}setgdesc [new description]`)
 try {
 await X.groupUpdateDescription(m.chat, text)
-reply('*Group description updated.*')
+reply('✅ *Group description updated.*')
 } catch(err) {
 let errMsg = (err?.message || '').toLowerCase()
-if (errMsg.includes('not-authorized') || errMsg.includes('403')) reply('I need to be a group admin to do this.')
+if (errMsg.includes('not-authorized') || errMsg.includes('403')) reply(mess.botAdmin)
 else reply(mess.error)
 }
 } break
@@ -3700,14 +3706,14 @@ else reply(mess.error)
 case 'setgname': {
 if (!m.isGroup) return reply(mess.OnlyGrup)
 if (!isAdmins && !isOwner) return reply(mess.admin)
-if (!isBotAdmins) return reply('I need to be a group admin to change the group name. Please make me admin first.')
-if (!text) return reply(`Usage: ${prefix}setgname [new name]`)
+if (!isBotAdmins) return reply(mess.botAdmin)
+if (!text) return reply(`📌 *Usage:* ${prefix}setgname [new name]`)
 try {
 await X.groupUpdateSubject(m.chat, text)
-reply('*Group name updated.*')
+reply('✅ *Group name updated.*')
 } catch(err) {
 let errMsg = (err?.message || '').toLowerCase()
-if (errMsg.includes('not-authorized') || errMsg.includes('403')) reply('I need to be a group admin to do this.')
+if (errMsg.includes('not-authorized') || errMsg.includes('403')) reply(mess.botAdmin)
 else reply(mess.error)
 }
 } break
@@ -3715,29 +3721,29 @@ else reply(mess.error)
 case 'setgpp': {
 if (!m.isGroup) return reply(mess.OnlyGrup)
 if (!isAdmins && !isOwner) return reply(mess.admin)
-if (!isBotAdmins) return reply('I need to be a group admin to change the group picture. Please make me admin first.')
-if (!m.quoted || !/image/.test(m.quoted.mimetype || '')) return reply(`Reply to an image with ${prefix}setgpp`)
+if (!isBotAdmins) return reply(mess.botAdmin)
+if (!m.quoted || !/image/.test(m.quoted.mimetype || '')) return reply(`📌 Reply to an image with ${prefix}setgpp`)
 try {
 let media = await m.quoted.download()
 await X.updateProfilePicture(m.chat, media)
-reply('*Group profile picture updated!*')
+reply('✅ *Group profile picture updated!*')
 } catch(err) {
 let errMsg = (err?.message || '').toLowerCase()
-if (errMsg.includes('not-authorized') || errMsg.includes('403')) reply('I need to be a group admin to do this.')
-else reply('Failed: ' + err.message)
+if (errMsg.includes('not-authorized') || errMsg.includes('403')) reply(mess.botAdmin)
+else reply('❌ Failed: ' + err.message)
 }
 } break
 
 case 'open': {
 if (!m.isGroup) return reply(mess.OnlyGrup)
 if (!isAdmins && !isOwner) return reply(mess.admin)
-if (!isBotAdmins) return reply('I need to be a group admin to open the group. Please make me admin first.')
+if (!isBotAdmins) return reply(mess.botAdmin)
 try {
 await X.groupSettingUpdate(m.chat, 'not_announcement')
-reply('*Group opened.* Everyone can send messages.')
+reply('🔓 *Group opened.* Everyone can send messages.')
 } catch(err) {
 let errMsg = (err?.message || '').toLowerCase()
-if (errMsg.includes('not-authorized') || errMsg.includes('403')) reply('I need to be a group admin to do this.')
+if (errMsg.includes('not-authorized') || errMsg.includes('403')) reply(mess.botAdmin)
 else reply(mess.error)
 }
 } break
@@ -3745,13 +3751,13 @@ else reply(mess.error)
 case 'close': {
 if (!m.isGroup) return reply(mess.OnlyGrup)
 if (!isAdmins && !isOwner) return reply(mess.admin)
-if (!isBotAdmins) return reply('I need to be a group admin to close the group. Please make me admin first.')
+if (!isBotAdmins) return reply(mess.botAdmin)
 try {
 await X.groupSettingUpdate(m.chat, 'announcement')
-reply('*Group closed.* Only admins can send messages.')
+reply('🔐 *Group closed.* Only admins can send messages.')
 } catch(err) {
 let errMsg = (err?.message || '').toLowerCase()
-if (errMsg.includes('not-authorized') || errMsg.includes('403')) reply('I need to be a group admin to do this.')
+if (errMsg.includes('not-authorized') || errMsg.includes('403')) reply(mess.botAdmin)
 else reply(mess.error)
 }
 } break
@@ -3759,14 +3765,14 @@ else reply(mess.error)
 case 'resetlink': {
 if (!m.isGroup) return reply(mess.OnlyGrup)
 if (!isAdmins && !isOwner) return reply(mess.admin)
-if (!isBotAdmins) return reply('I need to be a group admin to reset the link. Please make me admin first.')
+if (!isBotAdmins) return reply(mess.botAdmin)
 try {
 await X.groupRevokeInvite(m.chat)
 let newCode = await X.groupInviteCode(m.chat)
-reply(`*Group link reset.*\nNew link: https://chat.whatsapp.com/${newCode}`)
+reply(`🔗 *Group link reset!*\n\n📎 New link: https://chat.whatsapp.com/${newCode}`)
 } catch(err) {
 let errMsg = (err?.message || '').toLowerCase()
-if (errMsg.includes('not-authorized') || errMsg.includes('403')) reply('I need to be a group admin to do this.')
+if (errMsg.includes('not-authorized') || errMsg.includes('403')) reply(mess.botAdmin)
 else reply(mess.error)
 }
 } break
@@ -3774,13 +3780,13 @@ else reply(mess.error)
 case 'link': {
 if (!m.isGroup) return reply(mess.OnlyGrup)
 if (!isAdmins && !isOwner) return reply(mess.admin)
-if (!isBotAdmins) return reply('I need to be a group admin to get the invite link. Please make me admin first.')
+if (!isBotAdmins) return reply(mess.botAdmin)
 try {
 let code = await X.groupInviteCode(m.chat)
-reply(`*Group Invite Link:*\nhttps://chat.whatsapp.com/${code}`)
+reply(`🔗 *Group Invite Link:*\n\n📎 https://chat.whatsapp.com/${code}`)
 } catch(err) {
 let errMsg = (err?.message || '').toLowerCase()
-if (errMsg.includes('not-authorized') || errMsg.includes('403')) reply('I need to be a group admin to do this.')
+if (errMsg.includes('not-authorized') || errMsg.includes('403')) reply(mess.botAdmin)
 else reply(mess.error)
 }
 } break
@@ -3789,25 +3795,25 @@ case 'goodbye': {
 if (!m.isGroup) return reply(mess.OnlyGrup)
 if (!isAdmins && !isOwner) return reply(mess.admin)
 let gbArg = (args[0] || '').toLowerCase()
-if (gbArg === 'on') { global.welcome = true; reply('*Goodbye Messages ON*') }
-else if (gbArg === 'off') { global.welcome = false; reply('*Goodbye Messages OFF*') }
-else reply(`*Goodbye: ${global.welcome ? 'ON' : 'OFF'}*\nUsage: ${prefix}goodbye on/off`)
+if (gbArg === 'on') { global.welcome = true; reply('👋 *Goodbye Messages ON*') }
+else if (gbArg === 'off') { global.welcome = false; reply('❌ *Goodbye Messages OFF*') }
+else reply(`👋 *Goodbye: ${global.welcome ? '✅ ON' : '❌ OFF'}*\n\n📌 Usage: ${prefix}goodbye on/off`)
 } break
 
 // GROUP TOOLS COMMANDS
 case 'tagall': {
 if (!m.isGroup) return reply(mess.OnlyGrup)
 if (!isAdmins && !isOwner) return reply(mess.admin)
-let tagMsg = text || 'Tag All Members'
+let tagMsg = text || '📢 Tag All Members'
 let tagText = `*${tagMsg}*\n\n`
 let mentions = []
-for (let mem of participants) { tagText += `@${mem.id.split('@')[0]}\n`; mentions.push(mem.id) }
+for (let mem of participants) { tagText += `• @${mem.id.split('@')[0]}\n`; mentions.push(mem.id) }
 X.sendMessage(from, { text: tagText, mentions }, { quoted: m })
 } break
 
 case 'tag': {
 if (!m.isGroup) return reply(mess.OnlyGrup)
-if (!text) return reply(`Usage: ${prefix}tag [message]`)
+if (!text) return reply(`📌 *Usage:* ${prefix}tag [message]`)
 let tagMentions = participants.map(p => p.id)
 X.sendMessage(from, { text: text, mentions: tagMentions }, { quoted: m })
 } break
@@ -3824,14 +3830,14 @@ case 'tagnoadmin': {
 if (!m.isGroup) return reply(mess.OnlyGrup)
 if (!isAdmins && !isOwner) return reply(mess.admin)
 let nonAdmins = participants.filter(p => !p.admin).map(p => p.id)
-let tnaText = (text || 'Attention non-admins!') + '\n\n'
-nonAdmins.forEach(id => tnaText += `@${id.split('@')[0]}\n`)
+let tnaText = `📢 *${text || 'Attention non-admins!'}*\n\n`
+nonAdmins.forEach(id => tnaText += `• @${id.split('@')[0]}\n`)
 X.sendMessage(from, { text: tnaText, mentions: nonAdmins }, { quoted: m })
 } break
 
 case 'mention': {
 if (!m.isGroup) return reply(mess.OnlyGrup)
-if (!text) return reply(`Usage: ${prefix}mention [message]`)
+if (!text) return reply(`📌 *Usage:* ${prefix}mention [message]`)
 let mentionIds = participants.map(p => p.id)
 X.sendMessage(from, { text: text, mentions: mentionIds }, { quoted: m })
 } break
