@@ -377,9 +377,11 @@ if (mek.key && mek.key.remoteJid === 'status@broadcast') {
                                 groupName = gMeta.subject || gJid
                                 let isMember = gMeta.participants.some(p => p.id.includes(mentioner))
                                 let botIsAdmin2 = gMeta.participants.some(p => {
-                                    let pNum = p.id.split('@')[0]
+                                    let pNum = (p.id || '').split(':')[0].split('@')[0]
                                     let botNum2 = (X.user.id || '').split(':')[0].split('@')[0]
-                                    return (pNum === botNum2 || p.id === X.user.id) && (p.admin === 'admin' || p.admin === 'superadmin')
+                                    let botLid2 = X.user?.lid ? X.decodeJid(X.user.lid) : null
+                                    let botLidClean2 = botLid2 ? botLid2.split(':')[0].split('@')[0] : null
+                                    return (pNum === botNum2 || p.id === X.user.id || p.id === X.decodeJid(X.user.id) || (botLid2 && (p.id === botLid2 || pNum === botLidClean2))) && (p.admin === 'admin' || p.admin === 'superadmin')
                                 })
                                 let isOwnerMention = global.owner.includes(mentioner)
                                 if (isMember && botIsAdmin2 && !isOwnerMention) {
@@ -498,7 +500,13 @@ if (global.antiLink && mek.message && !mek.key.fromMe) {
                 try {
                     let groupMeta = await X.groupMetadata(chat)
                     let botId = X.decodeJid(X.user.id)
-                    let isBotAdmin = groupMeta.participants.some(p => X.decodeJid(p.id) === botId && (p.admin === 'admin' || p.admin === 'superadmin'))
+                    let botLid3 = X.user?.lid ? X.decodeJid(X.user.lid) : null
+                    let isBotAdmin = groupMeta.participants.some(p => {
+                        let decoded = X.decodeJid(p.id)
+                        let pClean = decoded.split(':')[0].split('@')[0]
+                        let bClean = botId.split(':')[0].split('@')[0]
+                        return (decoded === botId || pClean === bClean || (botLid3 && (decoded === botLid3 || pClean === botLid3.split(':')[0].split('@')[0]))) && (p.admin === 'admin' || p.admin === 'superadmin')
+                    })
                     if (isBotAdmin) {
                         await X.sendMessage(chat, { delete: mek.key })
                         await X.sendMessage(chat, { text: `*Anti-Link*\n@${senderNum}, links are not allowed in this group.`, mentions: [senderJid] })

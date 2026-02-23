@@ -84,7 +84,9 @@ const isOwner = (
     senderNumber === botNum ||
     ownerNums.includes(senderNumber) ||
     (m.sender && ownerNums.map(v => v + '@s.whatsapp.net').includes(m.sender)) ||
-    (m.sender && m.sender.split('@')[0].split(':')[0] === botNum)
+    (m.sender && m.sender.split('@')[0].split(':')[0] === botNum) ||
+    (m.key?.participant && X.decodeJid(m.key.participant).split(':')[0].split('@')[0] === botNum) ||
+    (m.key?.participant && ownerNums.includes(X.decodeJid(m.key.participant).split(':')[0].split('@')[0]))
 ) || false;
 const pushname = m.pushName || `${senderNumber}`
 const isBot = botNumber.includes(senderNumber)
@@ -97,18 +99,26 @@ const groupAdmins = m.isGroup ? await getGroupAdmins(participants) : ''
 const botLid = X.user?.lid ? X.decodeJid(X.user.lid) : null
 const botNumberClean = botNumber.split(':')[0].split('@')[0]
 const botLidClean = botLid ? botLid.split(':')[0].split('@')[0] : null
+const senderLid = m.key?.participant ? X.decodeJid(m.key.participant) : null
+const senderLidClean = senderLid ? senderLid.split(':')[0].split('@')[0] : null
 const isBotAdmins = m.isGroup ? participants.some(p => {
     const pid = (p.id || '').split(':')[0].split('@')[0]
     const isBot = pid === botNumberClean || 
                   p.id === botNumber || 
                   (botLid && (p.id === botLid || pid === botLidClean)) ||
-                  (X.user?.id && p.id === X.user.id)
+                  (X.user?.id && (p.id === X.user.id || pid === X.user.id.split(':')[0].split('@')[0]))
     return isBot && (p.admin === 'admin' || p.admin === 'superadmin')
 }) : false
 const isAdmins = m.isGroup ? (isOwner || participants.some(p => {
     const pid = (p.id || '').split(':')[0].split('@')[0]
     const sid = (m.sender || '').split(':')[0].split('@')[0]
-    return (pid === sid || p.id === m.sender) && (p.admin === 'admin' || p.admin === 'superadmin')
+    const pidFull = p.id || ''
+    const match = pid === sid || 
+                  pidFull === m.sender || 
+                  (senderLid && (pidFull === senderLid || pid === senderLidClean)) ||
+                  (pidFull.endsWith('@lid') && senderLid && pidFull === senderLid) ||
+                  (m.sender && m.sender.endsWith('@lid') && pid === m.sender.split(':')[0].split('@')[0])
+    return match && (p.admin === 'admin' || p.admin === 'superadmin')
 })) : false
 //━━━━━━━━━━━━━━━━━━━━━━━━//
 // Setting Console
@@ -1720,6 +1730,7 @@ break
                         case 'add': {
                                 if (!m.isGroup) return reply(mess.OnlyGrup);
                                 if (!isAdmins && !isOwner) return reply(mess.admin);
+                                if (!isBotAdmins) return reply('I need to be a group admin to add members. Please make me admin first.');
                                 let addTarget = null;
                                 if (m.mentionedJid && m.mentionedJid[0]) {
                                         addTarget = m.mentionedJid[0];
@@ -1773,6 +1784,7 @@ break
                         case 'remove': {
                                 if (!m.isGroup) return reply(mess.OnlyGrup);
                                 if (!isOwner && !isAdmins) return reply(mess.admin);
+                                if (!isBotAdmins) return reply('I need to be a group admin to remove members. Please make me admin first.');
                                 let users = (m.mentionedJid && m.mentionedJid[0]) ? m.mentionedJid[0] : m.quoted ? m.quoted.sender : text ? text.replace(/[^0-9]/g, '') + '@s.whatsapp.net' : null;
                                 if (!users) return reply(`*Usage:* ${prefix + command} @user or reply to their message`);
                                 if (owner.includes(users.replace('@s.whatsapp.net', ''))) {
@@ -1796,6 +1808,7 @@ break
                         case 'del':
                         case 'delete': {
                                 if (!m.quoted) return reply(`*Usage:* Reply to a message with ${prefix + command} to delete it.`);
+                                if (m.isGroup && !m.quoted.key.fromMe && !isBotAdmins) return reply('I need to be a group admin to delete other people\'s messages. Please make me admin first.');
                                 try {
                                         if (m.quoted.key.fromMe || isOwner || (m.isGroup && isAdmins)) {
                                                 await X.sendMessage(m.chat, { delete: m.quoted.key });
@@ -1803,7 +1816,9 @@ break
                                                 reply('You can only delete bot messages or your own messages (admin required in groups).');
                                         }
                                 } catch (err) {
-                                        reply('Failed to delete message. Make sure the bot is an admin.');
+                                        let errMsg = (err?.message || '').toLowerCase()
+                                        if (errMsg.includes('not-authorized') || errMsg.includes('403')) reply('I need to be a group admin to delete messages.')
+                                        else reply('Failed to delete message: ' + (err.message || 'Unknown error'));
                                 }
                         }
                         break;
@@ -1811,6 +1826,7 @@ break
                         case 'warn': {
                                 if (!m.isGroup) return reply(mess.OnlyGrup);
                                 if (!isOwner && !isAdmins) return reply(mess.admin);
+                                if (!isBotAdmins) return reply('I need to be a group admin to warn and remove users. Please make me admin first.');
                                 let warnUser = (m.mentionedJid && m.mentionedJid[0]) ? m.mentionedJid[0] : m.quoted ? m.quoted.sender : text ? text.replace(/[^0-9]/g, '') + '@s.whatsapp.net' : null;
                                 if (!warnUser) return reply(`*Usage:* ${prefix}warn @user [reason]\nReply to a message or mention someone.`);
                                 if (owner.includes(warnUser.replace('@s.whatsapp.net', ''))) return reply('Cannot warn the bot owner.');
@@ -1894,6 +1910,7 @@ break
                         case 'promote': {
                                 if (!m.isGroup) return reply(mess.OnlyGrup)
                                 if (!isOwner && !isAdmins) return reply(mess.admin)
+                                if (!isBotAdmins) return reply('I need to be a group admin to promote members. Please make me admin first.')
                                 let users = (m.mentionedJid && m.mentionedJid[0]) ? m.mentionedJid[0] : m.quoted ? m.quoted.sender : text ? text.replace(/[^0-9]/g, '') + '@s.whatsapp.net' : null
                                 if (!users) return reply(`*Example:* ${prefix + command} @user or reply to their message`)
                                 try {
@@ -1914,6 +1931,7 @@ break
                         case 'demote': {
                                 if (!m.isGroup) return reply(mess.OnlyGrup)
                                 if (!isOwner && !isAdmins) return reply(mess.admin)
+                                if (!isBotAdmins) return reply('I need to be a group admin to demote members. Please make me admin first.')
                                 let users = (m.mentionedJid && m.mentionedJid[0]) ? m.mentionedJid[0] : m.quoted ? m.quoted.sender : text ? text.replace(/[^0-9]/g, '') + '@s.whatsapp.net' : null
                                 if (!users) return reply(`*Example:* ${prefix + command} @user or reply to their message`)
                                 try {
@@ -1934,6 +1952,7 @@ break
                         case 'revoke':{
                                 if (!m.isGroup) return reply(mess.OnlyGrup);
                                 if (!isAdmins && !isOwner) return reply(mess.admin);
+                                if (!isBotAdmins) return reply('I need to be a group admin to do this. Please make me admin first.');
                                 try {
                                     await X.groupRevokeInvite(m.chat)
                                     reply(mess.success)
@@ -1949,6 +1968,7 @@ break
                         case 'acceptjoin': {
                                 if (!m.isGroup) return reply(mess.OnlyGrup)
                                 if (!isAdmins && !isOwner) return reply(mess.admin)
+                                if (!isBotAdmins) return reply('I need to be a group admin to approve join requests. Please make me admin first.')
                                 try {
                                         let pending = await X.groupRequestParticipantsList(m.chat)
                                         if (!pending || pending.length === 0) return reply('No pending join requests.')
@@ -1967,8 +1987,9 @@ break
                                                 reply(`*Pending Join Requests (${pending.length}):*\n\n${list}\n\n*Usage:*\n• ${prefix}approve all - Approve everyone\n• ${prefix}approve [number] - Approve specific\n• ${prefix}reject all - Reject everyone\n• ${prefix}reject [number] - Reject specific`)
                                         }
                                 } catch (err) {
-                                        console.error('Approve error:', err)
-                                        reply('Failed to process join requests: ' + (err.message || 'Unknown error'))
+                                        let errMsg = (err?.message || '').toLowerCase()
+                                        if (errMsg.includes('not-authorized') || errMsg.includes('403')) reply('I need to be a group admin to approve join requests.')
+                                        else reply('Failed to process join requests: ' + (err.message || 'Unknown error'))
                                 }
                         }
                         break
@@ -1977,6 +1998,7 @@ break
                         case 'rejectjoin': {
                                 if (!m.isGroup) return reply(mess.OnlyGrup)
                                 if (!isAdmins && !isOwner) return reply(mess.admin)
+                                if (!isBotAdmins) return reply('I need to be a group admin to reject join requests. Please make me admin first.')
                                 try {
                                         let pending = await X.groupRequestParticipantsList(m.chat)
                                         if (!pending || pending.length === 0) return reply('No pending join requests.')
@@ -1995,8 +2017,9 @@ break
                                                 reply(`*Pending Join Requests (${pending.length}):*\n\n${list}\n\nUse ${prefix}reject all or ${prefix}reject [number]`)
                                         }
                                 } catch (err) {
-                                        console.error('Reject error:', err)
-                                        reply('Failed to process join requests: ' + (err.message || 'Unknown error'))
+                                        let errMsg = (err?.message || '').toLowerCase()
+                                        if (errMsg.includes('not-authorized') || errMsg.includes('403')) reply('I need to be a group admin to reject join requests.')
+                                        else reply('Failed to process join requests: ' + (err.message || 'Unknown error'))
                                 }
                         }
                         break
@@ -3457,6 +3480,7 @@ if (modeArg === 'public') {
 case 'mute': {
 if (!m.isGroup) return reply(mess.OnlyGrup)
 if (!isAdmins && !isOwner) return reply(mess.admin)
+if (!isBotAdmins) return reply('I need to be a group admin to mute the group. Please make me admin first.')
 try {
 await X.groupSettingUpdate(m.chat, 'announcement')
 reply('*Group muted.* Only admins can send messages.')
@@ -3470,6 +3494,7 @@ else reply(mess.error)
 case 'unmute': {
 if (!m.isGroup) return reply(mess.OnlyGrup)
 if (!isAdmins && !isOwner) return reply(mess.admin)
+if (!isBotAdmins) return reply('I need to be a group admin to unmute the group. Please make me admin first.')
 try {
 await X.groupSettingUpdate(m.chat, 'not_announcement')
 reply('*Group unmuted.* Everyone can send messages.')
@@ -3541,6 +3566,7 @@ else reply(`*Anti Demote: ${global.antiDemote ? 'ON' : 'OFF'}*\nUsage: ${prefix}
 case 'setgdesc': {
 if (!m.isGroup) return reply(mess.OnlyGrup)
 if (!isAdmins && !isOwner) return reply(mess.admin)
+if (!isBotAdmins) return reply('I need to be a group admin to change the description. Please make me admin first.')
 if (!text) return reply(`Usage: ${prefix}setgdesc [new description]`)
 try {
 await X.groupUpdateDescription(m.chat, text)
@@ -3555,6 +3581,7 @@ else reply(mess.error)
 case 'setgname': {
 if (!m.isGroup) return reply(mess.OnlyGrup)
 if (!isAdmins && !isOwner) return reply(mess.admin)
+if (!isBotAdmins) return reply('I need to be a group admin to change the group name. Please make me admin first.')
 if (!text) return reply(`Usage: ${prefix}setgname [new name]`)
 try {
 await X.groupUpdateSubject(m.chat, text)
@@ -3569,6 +3596,7 @@ else reply(mess.error)
 case 'setgpp': {
 if (!m.isGroup) return reply(mess.OnlyGrup)
 if (!isAdmins && !isOwner) return reply(mess.admin)
+if (!isBotAdmins) return reply('I need to be a group admin to change the group picture. Please make me admin first.')
 if (!m.quoted || !/image/.test(m.quoted.mimetype || '')) return reply(`Reply to an image with ${prefix}setgpp`)
 try {
 let media = await m.quoted.download()
@@ -3584,6 +3612,7 @@ else reply('Failed: ' + err.message)
 case 'open': {
 if (!m.isGroup) return reply(mess.OnlyGrup)
 if (!isAdmins && !isOwner) return reply(mess.admin)
+if (!isBotAdmins) return reply('I need to be a group admin to open the group. Please make me admin first.')
 try {
 await X.groupSettingUpdate(m.chat, 'not_announcement')
 reply('*Group opened.* Everyone can send messages.')
@@ -3597,6 +3626,7 @@ else reply(mess.error)
 case 'close': {
 if (!m.isGroup) return reply(mess.OnlyGrup)
 if (!isAdmins && !isOwner) return reply(mess.admin)
+if (!isBotAdmins) return reply('I need to be a group admin to close the group. Please make me admin first.')
 try {
 await X.groupSettingUpdate(m.chat, 'announcement')
 reply('*Group closed.* Only admins can send messages.')
@@ -3610,6 +3640,7 @@ else reply(mess.error)
 case 'resetlink': {
 if (!m.isGroup) return reply(mess.OnlyGrup)
 if (!isAdmins && !isOwner) return reply(mess.admin)
+if (!isBotAdmins) return reply('I need to be a group admin to reset the link. Please make me admin first.')
 try {
 await X.groupRevokeInvite(m.chat)
 let newCode = await X.groupInviteCode(m.chat)
@@ -3624,6 +3655,7 @@ else reply(mess.error)
 case 'link': {
 if (!m.isGroup) return reply(mess.OnlyGrup)
 if (!isAdmins && !isOwner) return reply(mess.admin)
+if (!isBotAdmins) return reply('I need to be a group admin to get the invite link. Please make me admin first.')
 try {
 let code = await X.groupInviteCode(m.chat)
 reply(`*Group Invite Link:*\nhttps://chat.whatsapp.com/${code}`)
