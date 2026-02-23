@@ -1881,18 +1881,21 @@ break
                         case 'del':
                         case 'delete': {
                                 if (!m.quoted) return reply(`*Usage:* Reply to a message with ${prefix + command} to delete it.`);
-                                let quotedKey = m.quoted.fakeObj ? m.quoted.fakeObj.key : { remoteJid: m.quoted.chat || m.chat, fromMe: m.quoted.fromMe || false, id: m.quoted.id, participant: m.quoted.sender }
-                                if (m.isGroup && !quotedKey.fromMe && !isBotAdmins) return reply('I need to be a group admin to delete other people\'s messages. Please make me admin first.');
+                                let quotedKey = m.quoted.fakeObj ? { ...m.quoted.fakeObj.key } : { remoteJid: m.quoted.chat || m.chat, fromMe: m.quoted.fromMe || false, id: m.quoted.id }
+                                if (m.isGroup && !quotedKey.participant) {
+                                        quotedKey.participant = m.quoted.sender
+                                }
+                                if (m.isGroup && !quotedKey.fromMe && !isBotAdmins) return reply('⚠️ *Bot Not Admin* — Please promote me to group admin to delete messages.');
                                 try {
                                         if (quotedKey.fromMe || isOwner || (m.isGroup && isAdmins)) {
                                                 await X.sendMessage(m.chat, { delete: quotedKey });
                                         } else {
-                                                reply('You can only delete bot messages or your own messages (admin required in groups).');
+                                                reply('🚫 You can only delete bot messages or your own messages (admin required in groups).');
                                         }
                                 } catch (err) {
                                         let errMsg = (err?.message || '').toLowerCase()
-                                        if (errMsg.includes('not-authorized') || errMsg.includes('403')) reply('I need to be a group admin to delete messages.')
-                                        else reply('Failed to delete message: ' + (err.message || 'Unknown error'));
+                                        if (errMsg.includes('not-authorized') || errMsg.includes('403')) reply('⚠️ *Bot Not Admin* — Please promote me to group admin to delete messages.')
+                                        else reply('❌ Failed to delete message: ' + (err.message || 'Unknown error'));
                                 }
                         }
                         break;

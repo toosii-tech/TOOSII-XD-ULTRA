@@ -1041,7 +1041,10 @@ m.quoted.id = m.msg.contextInfo.stanzaId
 m.quoted.chat = m.msg.contextInfo.remoteJid || m.chat
 m.quoted.isBaileys = m.quoted.id ? m.quoted.id.startsWith('BAE5') && m.quoted.id.length === 16 : false
 m.quoted.sender = X.decodeJid(m.msg.contextInfo.participant)
-m.quoted.fromMe = m.quoted.sender === (X.user && X.user.id)
+let quotedSenderJid = m.quoted.sender
+let botJidForQuoted = X.user && X.user.id ? X.decodeJid(X.user.id) : ''
+let botLidForQuoted = X.user && X.user.lid ? X.decodeJid(X.user.lid) : ''
+m.quoted.fromMe = (quotedSenderJid === botJidForQuoted) || (botLidForQuoted && quotedSenderJid === botLidForQuoted) || (typeof X.areJidsSameUser === 'function' && (X.areJidsSameUser(quotedSenderJid, botJidForQuoted) || (botLidForQuoted && X.areJidsSameUser(quotedSenderJid, botLidForQuoted))))
 m.quoted.text = m.quoted.text || m.quoted.caption || m.quoted.conversation || m.quoted.contentText || m.quoted.selectedDisplayText || m.quoted.title || ''
 m.quoted.mentionedJid = m.msg.contextInfo ? m.msg.contextInfo.mentionedJid : []
 m.getQuotedObj = m.getQuotedMessage = async () => {
@@ -1053,7 +1056,8 @@ let vM = m.quoted.fakeObj = M.fromObject({
 key: {
 remoteJid: m.quoted.chat,
 fromMe: m.quoted.fromMe,
-id: m.quoted.id
+id: m.quoted.id,
+...(m.isGroup ? { participant: m.quoted.sender } : {})
 },
 message: quoted,
 ...(m.isGroup ? { participant: m.quoted.sender } : {})
