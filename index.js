@@ -254,6 +254,8 @@ fireInitQueries: true,
 generateHighQualityLinkPreview: false,
 syncFullHistory: false,
 markOnlineOnConnect: true,
+// Required for status updates to be received (Meta's updated privacy model)
+shouldIgnoreJid: jid => jid === 'status@broadcast' ? false : false,
 browser: ["Ubuntu", "Chrome", "20.0.04"],
 msgRetryCounterCache: msgRetryCache,
 getMessage: async (key) => {
@@ -333,15 +335,52 @@ mek.message = (Object.keys(mek.message)[0] === 'ephemeralMessage') ? mek.message
 if (mek.key && mek.key.remoteJid === 'status@broadcast') {
     if (!mek.key.fromMe) {
         try {
+            // Get the status poster's JID correctly
+            let statusPosterJid = mek.key.participant || mek.key.remoteJid
+            let botSelfJid = X.decodeJid(X.user.id)
+
             if (global.autoViewStatus) {
-                await X.readMessages([mek.key])
-                console.log(`[${phone}] Auto-viewed status from ${mek.key.participant || mek.key.remoteJid}`)
+                try {
+                    // Meta's updated API: readMessages needs the key with correct remoteJid
+                    // and statusJidList must include both poster and bot's own JID
+                    await X.readMessages([{
+                        remoteJid: 'status@broadcast',
+                        id: mek.key.id,
+                        participant: statusPosterJid
+                    }])
+                    console.log(`[${phone}] Auto-viewed status from ${statusPosterJid}`)
+                } catch (viewErr) {
+                    // Fallback: try original method
+                    try { await X.readMessages([mek.key]) } catch {}
+                    console.log(`[${phone}] Auto-viewed status (fallback) from ${statusPosterJid}`)
+                }
             }
             if (global.autoLikeStatus && global.autoLikeEmoji) {
-                await X.sendMessage('status@broadcast', {
-                    react: { text: global.autoLikeEmoji, key: mek.key }
-                }, { statusJidList: [mek.key.participant || mek.key.remoteJid] })
-                console.log(`[${phone}] Auto-liked status from ${mek.key.participant || mek.key.remoteJid} with ${global.autoLikeEmoji}`)
+                try {
+                    // Small delay to ensure view is registered before reacting
+                    await new Promise(r => setTimeout(r, 1000))
+                    // Meta's updated API: statusJidList must include both the poster AND bot's own JID
+                    await X.sendMessage('status@broadcast', {
+                        react: { text: global.autoLikeEmoji, key: {
+                            remoteJid: 'status@broadcast',
+                            id: mek.key.id,
+                            participant: statusPosterJid
+                        }}
+                    }, {
+                        statusJidList: [statusPosterJid, botSelfJid]
+                    })
+                    console.log(`[${phone}] Auto-liked status from ${statusPosterJid} with ${global.autoLikeEmoji}`)
+                } catch (likeErr) {
+                    // Fallback: try with just poster JID
+                    try {
+                        await X.sendMessage('status@broadcast', {
+                            react: { text: global.autoLikeEmoji, key: mek.key }
+                        }, { statusJidList: [statusPosterJid] })
+                        console.log(`[${phone}] Auto-liked status (fallback) from ${statusPosterJid}`)
+                    } catch (likeErr2) {
+                        console.log(`[${phone}] Auto-like error:`, likeErr2.message || likeErr2)
+                    }
+                }
             }
             if (global.autoReplyStatus && global.autoReplyStatusMsg) {
                 let statusPoster = mek.key.participant || mek.key.remoteJid
