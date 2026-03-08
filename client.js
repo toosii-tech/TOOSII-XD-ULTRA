@@ -648,10 +648,8 @@ if (m.key.fromMe && global.ownerFontMode && global.ownerFontMode !== 'off' && bu
             }
             // Only act if conversion actually changed something
             if (_converted !== budy) {
-                // Delete the original plain-text message
-                await X.sendMessage(m.chat, { delete: m.key })
-                // Resend as converted font in same chat
-                await X.sendMessage(m.chat, { text: _converted })
+                // Edit message in-place — no deletion notice shown to anyone
+                await X.sendMessage(m.chat, { text: _converted, edit: m.key })
             }
         }
     } catch (_fe) {
