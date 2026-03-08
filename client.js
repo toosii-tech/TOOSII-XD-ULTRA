@@ -1812,8 +1812,33 @@ try {
         exec('git rev-parse --is-inside-work-tree', { cwd: __dirname }, (err) => resolve(!err))
     })
     if (!isGitRepo) {
-        // First time: clone into a temp dir then copy files over
-        return reply(`⚠️ *Not a git repo.*\n\nClone the repo manually first:\n\`git clone ${repoUrl} .\`\nThen run ${prefix}update again.`)
+        // Not a git repo — auto-initialize and fetch from the configured repo URL
+        await X.sendMessage(m.chat, { text: `⚙️ *Not a git repo. Initializing...*\n\n_Fetching latest files from GitHub, please wait..._` }, { quoted: m })
+        await new Promise(resolve => exec('git init', { cwd: __dirname }, resolve))
+        await new Promise(resolve => exec(`git remote add origin ${repoUrl}`, { cwd: __dirname }, resolve))
+        exec('git fetch origin', { cwd: __dirname }, async (fetchErr, fetchOut, fetchStderr) => {
+            if (fetchErr) {
+                return await X.sendMessage(m.chat, { text: `❌ *Failed to fetch repo.*\n\n\`\`\`${(fetchStderr||fetchErr.message||'').slice(0,400)}\`\`\`\n\n_Check that the repo is public and the URL is correct._` }, { quoted: m })
+            }
+            // Try main then master
+            exec('git reset --hard origin/main', { cwd: __dirname }, async (e1, o1, s1) => {
+                const tryBranch = e1 ? 'master' : 'main'
+                const doReset = e1
+                    ? (cb) => exec('git reset --hard origin/master', { cwd: __dirname }, cb)
+                    : (cb) => cb(null, o1, s1)
+                doReset(async (e2, o2, s2) => {
+                    if (e2) {
+                        return await X.sendMessage(m.chat, { text: `❌ *Could not find main or master branch.*\n\`\`\`${(s2||'').slice(0,300)}\`\`\`` }, { quoted: m })
+                    }
+                    exec('npm install --production', { cwd: __dirname }, async () => {
+                        await X.sendMessage(m.chat, { text: `✅ *Bot initialized & updated from GitHub!*\n\n📦 Branch: ${tryBranch}\n🔄 _Restarting now..._` }, { quoted: m })
+                        await sleep(3000)
+                        process.exit(0)
+                    })
+                })
+            })
+        })
+        return
     }
     // Ensure remote 'origin' points to the configured repo URL
     await new Promise(resolve => exec(`git remote set-url origin ${repoUrl} 2>/dev/null || git remote add origin ${repoUrl}`, { cwd: __dirname }, resolve))
