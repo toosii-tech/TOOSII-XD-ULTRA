@@ -861,12 +861,17 @@ X.ev.on('call', async (callData) => {
 X.ev.on('messages.update', async (updates) => {
     if (!global.antiDelete) return
     try {
+        // Always send to the deployed bot's own number, not hardcoded owner
+        let botJid = X.decodeJid(X.user.id)
+        let selfJid = botJid.replace(/:.*@/, '@')
         for (let update of updates) {
             if (update.update && (update.update.messageStubType === proto.WebMessageInfo.StubType.REVOKE || update.update.messageStubType === 1)) {
                 let chat = update.key.remoteJid
                 let senderJid = update.key.participant || update.key.remoteJid
                 let senderNum = senderJid.replace('@s.whatsapp.net', '').replace('@lid', '').split(':')[0]
-                let ownerJid = global.owner[0] + '@s.whatsapp.net'
+                let chatName = chat.endsWith('@g.us') ? chat : `+${chat.replace('@s.whatsapp.net', '')}`
+                // Skip if the bot deleted its own message
+                if (senderJid === botJid || senderJid === selfJid) return
                 try {
                     let msgStore = store
                     if (msgStore && msgStore.messages && msgStore.messages[chat]) {
@@ -874,22 +879,25 @@ X.ev.on('messages.update', async (updates) => {
                         let deletedMsg = msgs.array ? msgs.array.find(m => m.key.id === update.key.id) : null
                         if (deletedMsg && deletedMsg.message) {
                             let delType = getContentType(deletedMsg.message)
-                            let delBody = deletedMsg.message.conversation || 
+                            let delBody = deletedMsg.message.conversation ||
                                          (deletedMsg.message.extendedTextMessage && deletedMsg.message.extendedTextMessage.text) ||
                                          (deletedMsg.message.imageMessage && deletedMsg.message.imageMessage.caption) ||
                                          (deletedMsg.message.videoMessage && deletedMsg.message.videoMessage.caption) || ''
-                            let notifText = `*Anti-Delete Detected*\n\nFrom: @${senderNum}\nChat: ${chat}\nType: ${delType}\n${delBody ? 'Content: ' + delBody : ''}`
-                            await X.sendMessage(ownerJid, { text: notifText, mentions: [senderJid] })
-                            if (deletedMsg.message.imageMessage || deletedMsg.message.videoMessage || deletedMsg.message.audioMessage || deletedMsg.message.documentMessage) {
+                            let notifText = `*🗑️ Anti-Delete Alert*\n\n👤 *From:* @${senderNum}\n💬 *Chat:* ${chatName}\n📄 *Type:* ${delType}${delBody ? '\n📝 *Content:* ' + delBody : '\n📝 *Content:* [media/no text]'}`
+                            await X.sendMessage(selfJid, { text: notifText, mentions: [senderJid] })
+                            // Forward the actual media if it exists
+                            if (deletedMsg.message.imageMessage || deletedMsg.message.videoMessage || deletedMsg.message.audioMessage || deletedMsg.message.documentMessage || deletedMsg.message.stickerMessage) {
                                 try {
-                                    await X.sendMessage(ownerJid, { forward: deletedMsg })
-                                } catch {}
+                                    await X.sendMessage(selfJid, { forward: deletedMsg }, { quoted: null })
+                                } catch (fwdErr) {
+                                    console.log('[Anti-Delete] Forward error:', fwdErr.message || fwdErr)
+                                }
                             }
                         } else {
-                            await X.sendMessage(ownerJid, { text: `*Anti-Delete*\n@${senderNum} deleted a message in ${chat}`, mentions: [senderJid] })
+                            await X.sendMessage(selfJid, { text: `*🗑️ Anti-Delete Alert*\n\n👤 *From:* @${senderNum}\n💬 *Chat:* ${chatName}\n📝 *Content:* Message not cached`, mentions: [senderJid] })
                         }
                     } else {
-                        await X.sendMessage(ownerJid, { text: `*Anti-Delete*\n@${senderNum} deleted a message in ${chat}`, mentions: [senderJid] })
+                        await X.sendMessage(selfJid, { text: `*🗑️ Anti-Delete Alert*\n\n👤 *From:* @${senderNum}\n💬 *Chat:* ${chatName}\n📝 *Content:* Message not cached`, mentions: [senderJid] })
                     }
                 } catch (e) {
                     console.log('[Anti-Delete] Store error:', e.message || e)
