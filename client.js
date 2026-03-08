@@ -4846,202 +4846,215 @@ await X.sendMessage(m.chat, { location: { degreesLatitude: parseFloat(loc.lat), 
 } break
 
 case 'tourl': {
-if (!m.quoted) return reply(`Reply to an image/video/document with ${prefix}tourl`)
+// Upload any media (image/video/audio/doc/sticker) and return a public CDN link
+if (!m.quoted) return reply(`📎 *Reply to any media* (image, video, audio, doc, sticker) with *${prefix}tourl*`)
 try {
-let mediaPath = await X.downloadAndSaveMediaMessage(m.quoted, 'tourl_temp')
-let media = fs.readFileSync(mediaPath)
-let url = await uploadImage(media)
-reply(`*File URL:*\n${url}`)
-fs.unlinkSync(mediaPath)
-} catch(e) { reply('Error: ' + e.message) }
-} break
-
-case 'vcf': {
-if (!m.isGroup) return reply(mess.OnlyGrup)
-if (!isAdmins && !isOwner) return reply(mess.admin)
-try {
-let vcfContent = 'BEGIN:VCARD\nVERSION:3.0\n'
-for (let p of participants) {
-let num = p.id.split('@')[0]
-vcfContent += `BEGIN:VCARD\nVERSION:3.0\nFN:${num}\nTEL;type=CELL:+${num}\nEND:VCARD\n`
-}
-let vcfBuffer = Buffer.from(vcfContent)
-await X.sendMessage(m.chat, { document: vcfBuffer, mimetype: 'text/vcard', fileName: `${groupMetadata.subject}_contacts.vcf` }, { quoted: m })
-} catch(e) { reply('Error: ' + e.message) }
-} break
-
-case 'runtime':
-case 'alive': {
-let uptime = process.uptime()
-let hrs = Math.floor(uptime / 3600)
-let mins = Math.floor((uptime % 3600) / 60)
-let secs = Math.floor(uptime % 60)
-reply(`*${global.botname} is alive!*\n\nRuntime: ${hrs}h ${mins}m ${secs}s\nPrefix: ${prefix || '.'}\nMode: ${X.public ? 'Public' : 'Self'}\nVersion: ${global.botver || '2.0.0'}\n\n${global.packname}`)
-} break
-
-case 'block': {
-if (!isOwner) return reply(mess.OnlyOwner)
-let blockUser = (m.mentionedJid && m.mentionedJid[0]) ? m.mentionedJid[0] : m.quoted ? m.quoted.sender : text ? text.replace(/[^0-9]/g, '') + '@s.whatsapp.net' : null
-if (!blockUser) return reply(`Usage: ${prefix}block @user`)
-try {
-await X.updateBlockStatus(blockUser, 'block')
-reply(`*@${blockUser.split('@')[0]} has been blocked.*`)
-} catch(e) { reply('Error: ' + e.message) }
-} break
-
-case 'unblock': {
-if (!isOwner) return reply(mess.OnlyOwner)
-let unblockUser = (m.mentionedJid && m.mentionedJid[0]) ? m.mentionedJid[0] : m.quoted ? m.quoted.sender : text ? text.replace(/[^0-9]/g, '') + '@s.whatsapp.net' : null
-if (!unblockUser) return reply(`Usage: ${prefix}unblock @user`)
-try {
-await X.updateBlockStatus(unblockUser, 'unblock')
-reply(`*@${unblockUser.split('@')[0]} has been unblocked.*`)
-} catch(e) { reply('Error: ' + e.message) }
-} break
-
-case 'listblock': {
-if (!isOwner) return reply(mess.OnlyOwner)
-try {
-let blocked = await X.fetchBlocklist()
-if (!blocked.length) return reply('No blocked users.')
-let list = blocked.map((b, i) => `${i+1}. @${b.split('@')[0]}`).join('\n')
-X.sendMessage(from, { text: `*Blocked Users (${blocked.length}):*\n\n${list}`, mentions: blocked }, { quoted: m })
-} catch(e) { reply('Error: ' + e.message) }
-} break
-
-//━━━━━━━━━━━━━━━━━━━━━━━━//
-// Sticker & Converter Commands
-case 'stickercrop':
-case 'scrop': {
-if (!m.quoted || !/image/.test(m.quoted.mimetype || '')) return reply(`Reply to an image with ${prefix}stickercrop`)
-try {
-let mediaPath = await X.downloadAndSaveMediaMessage(m.quoted, 'scrop_temp')
-let media = fs.readFileSync(mediaPath)
-let sticker = new Sticker(media, { pack: global.packname, author: global.author, type: 'crop', quality: 80 })
-await X.sendMessage(m.chat, await sticker.toMessage(), { quoted: m })
-fs.unlinkSync(mediaPath)
-} catch(e) { reply('Error: ' + e.message) }
-} break
-
-case 'take':
-case 'steal': {
-if (!m.quoted || !/sticker/.test(m.quoted.mtype || '')) return reply(`Reply to a sticker with ${prefix}take [pack|author]`)
-try {
-let [pack, auth] = (text || `${global.packname}|${global.author}`).split('|')
-let stickerBuf = await m.quoted.download()
-let sticker = new Sticker(stickerBuf, { pack: pack?.trim() || global.packname, author: auth?.trim() || global.author, type: 'full' })
-await X.sendMessage(m.chat, await sticker.toMessage(), { quoted: m })
-} catch(e) { reply('Error: ' + e.message) }
-} break
-
-case 'meme':
-case 'smeme': {
-if (!m.quoted || !/image/.test(m.quoted.mimetype || '')) return reply(`Reply to an image with ${prefix}meme [top text|bottom text]`)
-if (!text) return reply(`Example: ${prefix}meme When the code works|But you don't know why`)
-try {
-let [topText, bottomText] = text.split('|').map(t => (t || '').trim())
-let mediaPath = await X.downloadAndSaveMediaMessage(m.quoted, 'meme_temp')
-let media = fs.readFileSync(mediaPath)
-let url = await uploadImage(media)
-let memeUrl = `https://api.memegen.link/images/custom/${encodeURIComponent(topText || '_')}/${encodeURIComponent(bottomText || '_')}.png?background=${encodeURIComponent(url)}`
-await X.sendMessage(m.chat, { image: { url: memeUrl }, caption: '*Meme created!*' }, { quoted: m })
-fs.unlinkSync(mediaPath)
-} catch(e) { reply('Error: ' + e.message) }
-} break
-
-case 'blur': {
-if (!m.quoted || !/image/.test(m.quoted.mimetype || '')) return reply(`Reply to an image with ${prefix}blur`)
-try {
-reply('*Blur:* Image blur requires image processing libraries. Use a photo editing app for this feature.')
-} catch(e) { reply('Error: ' + e.message) }
-} break
-
-case 'removebg': {
-if (!m.quoted || !/image/.test(m.quoted.mimetype || '')) return reply(`Reply to an image with ${prefix}removebg`)
-try {
-let mediaPath = await X.downloadAndSaveMediaMessage(m.quoted, 'rmbg_temp')
-let media = fs.readFileSync(mediaPath)
-let url = await uploadImage(media)
-let apiRes = await fetch(`https://api.remove.bg/v1.0/removebg`, { method: 'POST', headers: { 'X-Api-Key': process.env.REMOVEBG_KEY || '' }, body: JSON.stringify({ image_url: url, size: 'auto' }) })
-if (!apiRes.ok) return reply('*RemoveBG:* API key not configured or limit reached.\nSet REMOVEBG_KEY environment variable.')
-let buffer = Buffer.from(await apiRes.arrayBuffer())
-await X.sendMessage(m.chat, { image: buffer, caption: '*Background Removed!*' }, { quoted: m })
-fs.unlinkSync(mediaPath)
-} catch(e) { reply('Error: ' + e.message) }
+    await reply('📤 _Uploading media..._')
+    const _buf = await m.quoted.download()
+    if (!_buf || _buf.length < 100) throw new Error('Download failed — media may have expired')
+    // Write with correct extension based on mimetype
+    const _mime = m.quoted.mimetype || m.quoted.msg?.mimetype || 'application/octet-stream'
+    const _extMap = {'image/jpeg':'jpg','image/png':'png','image/webp':'webp','image/gif':'gif','video/mp4':'mp4','audio/mpeg':'mp3','audio/ogg':'ogg','audio/mp4':'m4a','application/pdf':'pdf'}
+    const _ext = _extMap[_mime.split(';')[0].trim()] || 'bin'
+    const _tmp = `/tmp/tourl_${Date.now()}.${_ext}`
+    require('fs').writeFileSync(_tmp, _buf)
+    const _url = await CatBox(_tmp)
+    require('fs').unlinkSync(_tmp)
+    if (!_url || !_url.startsWith('http')) throw new Error('Upload failed — try again')
+    await X.sendMessage(m.chat, {
+        text: `✅ *Media uploaded!*\n\n🔗 *URL:*\n${_url}\n\n📦 _Size: ${(_buf.length/1024).toFixed(1)} KB | Type: ${_mime.split(';')[0]}_`
+    }, { quoted: m })
+} catch(e) { reply(`❌ *tourl failed:* ${e.message}`) }
 } break
 
 case 'simage':
 case 'timage':
 case 'toimage': {
-if (!m.quoted || !/sticker/.test(m.quoted.mtype || '')) return reply(`Reply to a sticker with ${prefix}${command}`)
+// Convert sticker (webp) → image (jpeg/png)
+const _qmtype = m.quoted?.mtype || ''
+const _qmime = m.quoted?.mimetype || m.quoted?.msg?.mimetype || ''
+const _isSticker = _qmtype === 'stickerMessage' || /webp/.test(_qmime)
+if (!m.quoted || !_isSticker) return reply(`🖼️ *Reply to a sticker* with *${prefix}toimage* to convert it to an image`)
 try {
-let stickerBuf = await m.quoted.download()
-await X.sendMessage(m.chat, { image: stickerBuf, caption: '*Sticker converted to image!*' }, { quoted: m })
-} catch(e) { reply('Error: ' + e.message) }
+    await reply('🔄 _Converting sticker to image..._')
+    const _buf = await m.quoted.download()
+    if (!_buf || _buf.length < 100) throw new Error('Sticker download failed')
+    // Use jimp to convert webp → jpeg since WA webp may be animated
+    const _outPath = `/tmp/toimage_${Date.now()}`
+    require('fs').writeFileSync(`${_outPath}.webp`, _buf)
+    // ffmpeg: webp → png (handles both static and animated, takes first frame)
+    await new Promise((resolve, reject) => {
+        require('child_process').exec(
+            `ffmpeg -y -i ${_outPath}.webp -vframes 1 -f image2 ${_outPath}.png`,
+            (err) => err ? reject(err) : resolve()
+        )
+    })
+    const _img = require('fs').readFileSync(`${_outPath}.png`)
+    await X.sendMessage(m.chat, { image: _img, caption: '🖼️ *Sticker → Image*' }, { quoted: m })
+    try { require('fs').unlinkSync(`${_outPath}.webp`); require('fs').unlinkSync(`${_outPath}.png`) } catch {}
+} catch(e) { reply(`❌ *toimage failed:* ${e.message}`) }
 } break
 
 case 'totext': {
-if (!m.quoted || !/image/.test(m.quoted.mimetype || '')) return reply(`┏━━━━━━━━━━━━━━━━━━━━━━━┓\n┃  📄 *IMAGE TO TEXT (OCR)*\n┗━━━━━━━━━━━━━━━━━━━━━━━┛\n\nExtract all text from any image.\n\n*Usage:* Reply to an image with *${prefix}totext*\n\n_Works with screenshots, documents, signs, menus, receipts, etc._`)
-try {
-await reply('📄 _Extracting text from image..._')
-let imgBuffer = await m.quoted.download()
-if (!imgBuffer || imgBuffer.length < 100) throw new Error('Failed to download image')
-let b64 = imgBuffer.toString('base64')
-let mime = m.quoted.mimetype || 'image/jpeg'
-let ocrPrompt = 'Extract ALL text from this image exactly as it appears. Preserve formatting, line breaks, and structure. If there are multiple sections, label them. If no text is found, say "No text detected in this image."'
-let { data } = await axios.post('https://text.pollinations.ai/openai', {
-    model: 'openai',
-    messages: [{
-        role: 'user',
-        content: [
-            { type: 'text', text: ocrPrompt },
-            { type: 'image_url', image_url: { url: `data:${mime};base64,${b64}` } }
-        ]
-    }],
-    max_tokens: 2000,
-    stream: false
-}, { headers: { 'Content-Type': 'application/json' }, timeout: 30000 })
-let extracted = data?.choices?.[0]?.message?.content
-if (!extracted) throw new Error('No text extracted')
-reply(`┏━━━━━━━━━━━━━━━━━━━━━━━┓\n┃  📄 *EXTRACTED TEXT*\n┗━━━━━━━━━━━━━━━━━━━━━━━┛\n\n${extracted}`)
-} catch(e) {
-// Fallback: upload then OCR
-try {
-let imgBuffer2 = await m.quoted.download()
-let uploadUrl = await uploadImage(imgBuffer2)
-if (!uploadUrl || !uploadUrl.startsWith('http')) throw new Error('Upload failed')
-let { data: fb } = await axios.post('https://text.pollinations.ai/openai', {
-    model: 'openai',
-    messages: [{ role: 'user', content: [
-        { type: 'text', text: 'Extract ALL text from this image exactly as it appears. Preserve line breaks and structure.' },
-        { type: 'image_url', image_url: { url: uploadUrl } }
-    ]}],
-    max_tokens: 2000, stream: false
-}, { headers: { 'Content-Type': 'application/json' }, timeout: 30000 })
-let extracted2 = fb?.choices?.[0]?.message?.content
-if (!extracted2) throw new Error('No text extracted')
-reply(`┏━━━━━━━━━━━━━━━━━━━━━━━┓\n┃  📄 *EXTRACTED TEXT*\n┗━━━━━━━━━━━━━━━━━━━━━━━┛\n\n${extracted2}`)
-} catch(e2) { reply(`❌ *Text extraction failed.*\n_${e2.message || 'Try again shortly.'}_`) }
+// Extract text from an image using OCR via pollinations vision API
+if (!m.quoted || !/image/.test(m.quoted.mimetype || m.quoted.msg?.mimetype || '')) {
+    return reply(`📄 *Reply to an image* with *${prefix}totext* to extract all text from it\n\n_Works on screenshots, documents, signs, receipts, etc._`)
 }
+try {
+    await reply('🔍 _Reading text from image..._')
+    const _imgBuf = await m.quoted.download()
+    if (!_imgBuf || _imgBuf.length < 100) throw new Error('Image download failed')
+    const _mime = m.quoted.mimetype || m.quoted.msg?.mimetype || 'image/jpeg'
+    const _b64 = _imgBuf.toString('base64')
+    const _prompt = 'Extract ALL text from this image exactly as it appears. Preserve formatting, line breaks, and structure. If no text is found, say "No text detected."'
+    let _extracted = null
+    // Primary: pollinations base64 vision
+    try {
+        const { data: _d } = await axios.post('https://text.pollinations.ai/openai', {
+            model: 'openai', max_tokens: 2000, stream: false,
+            messages: [{ role: 'user', content: [
+                { type: 'text', text: _prompt },
+                { type: 'image_url', image_url: { url: `data:${_mime};base64,${_b64}` } }
+            ]}]
+        }, { headers: { 'Content-Type': 'application/json' }, timeout: 30000 })
+        _extracted = _d?.choices?.[0]?.message?.content
+    } catch {}
+    // Fallback: upload to catbox then use URL
+    if (!_extracted) {
+        const _tmp = `/tmp/totext_${Date.now()}.jpg`
+        require('fs').writeFileSync(_tmp, _imgBuf)
+        const _uploadUrl = await CatBox(_tmp)
+        require('fs').unlinkSync(_tmp)
+        if (_uploadUrl && _uploadUrl.startsWith('http')) {
+            const { data: _d2 } = await axios.post('https://text.pollinations.ai/openai', {
+                model: 'openai', max_tokens: 2000, stream: false,
+                messages: [{ role: 'user', content: [
+                    { type: 'text', text: _prompt },
+                    { type: 'image_url', image_url: { url: _uploadUrl } }
+                ]}]
+            }, { headers: { 'Content-Type': 'application/json' }, timeout: 30000 })
+            _extracted = _d2?.choices?.[0]?.message?.content
+        }
+    }
+    if (!_extracted) throw new Error('Could not extract text — try a clearer image')
+    reply(`📄 *Extracted Text:*\n\n${_extracted}`)
+} catch(e) { reply(`❌ *totext failed:* ${e.message}`) }
 } break
 
 case 'toaudio':
 case 'tomp3': {
-if (!m.quoted || !/video/.test(m.quoted.mimetype || '')) return reply(`Reply to a video with ${prefix}${command}`)
+// Convert video → MP3 audio using ffmpeg
+const _qmime2 = m.quoted?.mimetype || m.quoted?.msg?.mimetype || ''
+if (!m.quoted || !/video|audio/.test(_qmime2)) return reply(`🎵 *Reply to a video* with *${prefix}tomp3* to extract its audio as MP3`)
 try {
-let mediaPath = await X.downloadAndSaveMediaMessage(m.quoted, 'tomp3_temp')
-let media = fs.readFileSync(mediaPath)
-await X.sendMessage(m.chat, { audio: media, mimetype: 'audio/mpeg' }, { quoted: m })
-fs.unlinkSync(mediaPath)
-} catch(e) { reply('Error: ' + e.message) }
+    await reply('🔄 _Extracting audio from video..._')
+    const _vBuf = await m.quoted.download()
+    if (!_vBuf || _vBuf.length < 100) throw new Error('Video download failed')
+    const _vPath = `/tmp/tomp3_in_${Date.now()}.mp4`
+    const _aPath = `/tmp/tomp3_out_${Date.now()}.mp3`
+    require('fs').writeFileSync(_vPath, _vBuf)
+    await new Promise((resolve, reject) => {
+        require('child_process').exec(
+            `ffmpeg -y -i "${_vPath}" -vn -acodec libmp3lame -ab 128k -ar 44100 "${_aPath}"`,
+            { timeout: 120000 },
+            (err, _so, se) => err ? reject(new Error(se || err.message)) : resolve()
+        )
+    })
+    const _mp3 = require('fs').readFileSync(_aPath)
+    await X.sendMessage(m.chat, {
+        audio: _mp3, mimetype: 'audio/mpeg',
+        fileName: `audio_${Date.now()}.mp3`
+    }, { quoted: m })
+    try { require('fs').unlinkSync(_vPath); require('fs').unlinkSync(_aPath) } catch {}
+} catch(e) { reply(`❌ *tomp3 failed:* ${e.message}`) }
 } break
 
-case 'toppt': {
-if (!m.quoted || !/audio/.test(m.quoted.mimetype || '')) return reply(`Reply to an audio with ${prefix}toppt`)
+case 'toppt':
+case 'tovoice': {
+// Convert any audio or video → WhatsApp voice note (ogg opus ptt)
+const _qmime3 = m.quoted?.mimetype || m.quoted?.msg?.mimetype || ''
+if (!m.quoted || !/audio|video/.test(_qmime3)) return reply(`🎤 *Reply to an audio or video* with *${prefix}toppt* to convert it to a voice note`)
 try {
-let audioBuf = await m.quoted.download()
-await X.sendMessage(m.chat, { audio: audioBuf, mimetype: 'audio/ogg; codecs=opus', ptt: true }, { quoted: m })
-} catch(e) { reply('Error: ' + e.message) }
+    await reply('🔄 _Converting to voice note..._')
+    const _inBuf = await m.quoted.download()
+    if (!_inBuf || _inBuf.length < 100) throw new Error('Media download failed')
+    const _inExt = /video/.test(_qmime3) ? 'mp4' : 'mp3'
+    const _inPath = `/tmp/toppt_in_${Date.now()}.${_inExt}`
+    const _outPath = `/tmp/toppt_out_${Date.now()}.ogg`
+    require('fs').writeFileSync(_inPath, _inBuf)
+    await new Promise((resolve, reject) => {
+        require('child_process').exec(
+            `ffmpeg -y -i "${_inPath}" -vn -c:a libopus -b:a 64k -ar 48000 -ac 1 "${_outPath}"`,
+            { timeout: 120000 },
+            (err, _so, se) => err ? reject(new Error(se || err.message)) : resolve()
+        )
+    })
+    const _ogg = require('fs').readFileSync(_outPath)
+    await X.sendMessage(m.chat, {
+        audio: _ogg, mimetype: 'audio/ogg; codecs=opus', ptt: true
+    }, { quoted: m })
+    try { require('fs').unlinkSync(_inPath); require('fs').unlinkSync(_outPath) } catch {}
+} catch(e) { reply(`❌ *toppt failed:* ${e.message}`) }
+} break
+
+case 'removebg': {
+// Remove image background — uses remove.bg API if key set, otherwise free fallback via photoroom
+if (!m.quoted || !/image/.test(m.quoted.mimetype || m.quoted.msg?.mimetype || '')) {
+    return reply(`🖼️ *Reply to an image* with *${prefix}removebg* to remove its background`)
+}
+try {
+    await reply('✂️ _Removing background..._')
+    const _rBuf = await m.quoted.download()
+    if (!_rBuf || _rBuf.length < 100) throw new Error('Image download failed')
+    let _result = null
+    // Primary: remove.bg (if API key configured)
+    const _rbKey = process.env.REMOVEBG_KEY || global.removebgKey || ''
+    if (_rbKey) {
+        try {
+            const _fd = new FormData()
+            _fd.append('image_file', _rBuf, { filename: 'image.jpg', contentType: 'image/jpeg' })
+            _fd.append('size', 'auto')
+            const _rbRes = await axios.post('https://api.remove.bg/v1.0/removebg', _fd, {
+                headers: { ..._fd.getHeaders(), 'X-Api-Key': _rbKey },
+                responseType: 'arraybuffer', timeout: 30000
+            })
+            if (_rbRes.status === 200) _result = Buffer.from(_rbRes.data)
+        } catch {}
+    }
+    // Fallback: photoroom free API (no key needed)
+    if (!_result) {
+        try {
+            const _fd2 = new FormData()
+            _fd2.append('image_file', _rBuf, { filename: 'image.jpg', contentType: 'image/jpeg' })
+            const _prRes = await axios.post('https://sdk.photoroom.com/v1/segment', _fd2, {
+                headers: { ..._fd2.getHeaders() },
+                responseType: 'arraybuffer', timeout: 30000
+            })
+            if (_prRes.status === 200) _result = Buffer.from(_prRes.data)
+        } catch {}
+    }
+    // Fallback 2: remove.bg unofficial endpoint
+    if (!_result) {
+        try {
+            const _tmp2 = `/tmp/rmbg_${Date.now()}.jpg`
+            require('fs').writeFileSync(_tmp2, _rBuf)
+            const _uploadedUrl = await CatBox(_tmp2)
+            require('fs').unlinkSync(_tmp2)
+            if (_uploadedUrl?.startsWith('http')) {
+                const _fd3 = new FormData()
+                _fd3.append('image_url', _uploadedUrl)
+                _fd3.append('size', 'auto')
+                const _rbRes2 = await axios.post('https://api.remove.bg/v1.0/removebg', _fd3, {
+                    headers: { ..._fd3.getHeaders(), 'X-Api-Key': 'DEMO' },
+                    responseType: 'arraybuffer', timeout: 30000
+                })
+                if (_rbRes2.status === 200) _result = Buffer.from(_rbRes2.data)
+            }
+        } catch {}
+    }
+    if (!_result) throw new Error('All background removal services failed. Set REMOVEBG_KEY in env for best results.')
+    await X.sendMessage(m.chat, { image: _result, caption: '✅ *Background removed!*' }, { quoted: m })
+} catch(e) { reply(`❌ *removebg failed:* ${e.message}`) }
 } break
 
 //━━━━━━━━━━━━━━━━━━━━━━━━//
