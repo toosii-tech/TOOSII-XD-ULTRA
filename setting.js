@@ -61,6 +61,9 @@ global.botTimezone = 'Africa/Nairobi'
 global.botPic = ''
 global.botUrl = 'https://wa.me/254748340864'
 //━━━━━━━━━━━━━━━━━━━━━━━━//
+// GitHub Repo URL (used by .update command — set this to your repo)
+global.repoUrl = 'https://github.com/TOOSII102/TOOSII-XD-ULTRA'
+//━━━━━━━━━━━━━━━━━━━━━━━━//
 // Sticker Marker
 global.packname = "TOOSII-XD ULTRA"
 global.author = "© Toosii Tech"
