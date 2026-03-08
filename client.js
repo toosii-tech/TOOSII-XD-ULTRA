@@ -1326,12 +1326,13 @@ try {
     if (!groupParticipants.length) return reply('Could not fetch group participants. Try again.')
 
     // Case 1: Replied to a message — post that media/text as group status
+    // IMPORTANT: statuses must go to 'status@broadcast', NOT m.chat — statusJidList controls who sees it
     if (m.quoted) {
         let qType = m.quoted.mtype || ''
         if (qType === 'imageMessage' || /image/.test(m.quoted.mimetype || '')) {
             let buf = await m.quoted.download()
             let cap = m.quoted.text || m.quoted.caption || ''
-            await X.sendMessage(m.chat, {
+            await X.sendMessage('status@broadcast', {
                 image: buf,
                 caption: cap,
                 backgroundColor: '#000000',
@@ -1341,14 +1342,14 @@ try {
         } else if (qType === 'videoMessage' || /video/.test(m.quoted.mimetype || '')) {
             let buf = await m.quoted.download()
             let cap = m.quoted.text || m.quoted.caption || ''
-            await X.sendMessage(m.chat, {
+            await X.sendMessage('status@broadcast', {
                 video: buf,
                 caption: cap,
                 gifPlayback: false
             }, { statusJidList: groupParticipants })
             reply('✅ *Video posted to group status!*')
         } else if (m.quoted.text) {
-            await X.sendMessage(m.chat, {
+            await X.sendMessage('status@broadcast', {
                 text: m.quoted.text,
                 backgroundColor: '#075E54',
                 font: 4
@@ -1359,7 +1360,7 @@ try {
         }
     // Case 2: Text provided directly — post as text status
     } else if (text) {
-        await X.sendMessage(m.chat, {
+        await X.sendMessage('status@broadcast', {
             text: text,
             backgroundColor: '#075E54',
             font: 4
