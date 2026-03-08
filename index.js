@@ -827,144 +827,158 @@ X.sendFile = async (jid, path, filename = '', caption = '', quoted, ptt = false,
 // Welcome Setting
 
     X.ev.on('group-participants.update', async (anu) => {
-        if (global.welcome){
-console.log(anu)
-try {
-let metadata = await X.groupMetadata(anu.id)
-let participants = anu.participants
-for (let num of participants) {
-try {
-ppuser = await X.profilePictureUrl(num, 'image')
-} catch (err) {
-ppuser = 'https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_960_720.png?q=60'
-}
-try {
-ppgroup = await X.profilePictureUrl(anu.id, 'image')
-} catch (err) {
-ppgroup = 'https://i.ibb.co/RBx5SQC/avatar-group-large-v2.png?q=60'
-}
-memb = metadata.participants.length
-groupwelcome = await getBuffer(ppuser)
-groupleft = await getBuffer(ppuser)
-                if (anu.action == 'add') {
-                const Xbuffer = await getBuffer(ppuser)
-                let XName = num
-                    const members = metadata.participants.length
-                Xbody = `
-┏──────────────────────⏣ 
-@${XName.split("@")[0]}
-┣──────────────────────⏣
-┣⛩️•   𝗪𝗲𝗹𝗰𝗼𝗺𝗲 𝘁𝗼 
-┣${metadata.subject}
-┣⛩️•   𝗠𝗲𝗺𝗯𝗲𝗿 : 
-┣${members}th
-└───────────────┈ ⳹`
-X.sendMessage(anu.id,
- { text: Xbody,
- contextInfo:{
- mentionedJid:[num],
- "externalAdReply": {"showAdAttribution": true,
- "containsAutoReply": true,
- "title": ` ${global.botname}`,
-"body": `${ownername}`,
- "previewType": "PHOTO",
-"thumbnailUrl": ``,
-"thumbnail": groupwelcome,
-"sourceUrl": `${wagc}`}}})
-                } else if (anu.action == 'remove') {
-                        const Xbuffer = await getBuffer(ppuser)
-                        let XName = num
-                    const Xmembers = metadata.participants.length
-                    Xbody = `
-┏──────────────────────⏣ 
-┣@${XName.split("@")[0]}
-┣──────────────────────⏣
-┣⛩️•   𝗪𝗲𝗹𝗰𝗼𝗺𝗲 𝘁𝗼 
-┣${metadata.subject}
-┣⛩️•   𝗠𝗲𝗺𝗯𝗲𝗿 : 
-┣${members}th
-└───────────────┈ ⳹`
-X.sendMessage(anu.id,
- { text: Xbody,
- contextInfo:{
- mentionedJid:[num],
- "externalAdReply": {"showAdAttribution": true,
- "containsAutoReply": true,
- "title": ` ${global.botname}`,
-"body": `${ownername}`,
- "previewType": "PHOTO",
-"thumbnailUrl": ``,
-"thumbnail": groupleft,
-"sourceUrl": `${wagc}`}}})
-}
-}
-} catch (err) {
-console.log(err)
-}
-}
-})
-//━━━━━━━━━━━━━━━━━━━━━━━━//
-    X.ev.on('group-participants.update', async (anu) => {
-        if (global.adminevent){
-console.log(anu)
-try {
-let participants = anu.participants
-for (let num of participants) {
-try {
-ppuser = await X.profilePictureUrl(num, 'image')
-} catch (err) {
-ppuser = 'https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_960_720.png?q=60'
-}
-try {
-ppgroup = await X.profilePictureUrl(anu.id, 'image')
-} catch (err) {
-ppgroup = 'https://i.ibb.co/RBx5SQC/avatar-group-large-v2.png?q=60'
-}
- if (anu.action == 'promote') {
-let XName = num
-Xbody = ` 
-━━━━━━━━━━━━━━━━━━━━━
-         *[ PROMOTE ]*
-@${XName.split("@")[0]}, Congratulations! You are now an *Admin*
-━━━━━━━━━━━━━━━━━━━━━`
-   X.sendMessage(anu.id,
- { text: Xbody,
- contextInfo:{
- mentionedJid:[num],
- "externalAdReply": {"showAdAttribution": true,
- "containsAutoReply": true,
- "title": ` ${global.botname}`,
-"body": `${ownername}`,
- "previewType": "PHOTO",
-"thumbnailUrl": ``,
-"thumbnail": groupwelcome,
-"sourceUrl": `${wagc}`}}})
-} else if (anu.action == 'demote') {
-let XName = num
-Xbody = `
-━━━━━━━━━━━━━━━━━━━━━
-         *[ DEMOTE ]*
-@${XName.split("@")[0]}, You have been *demoted* from admin
-━━━━━━━━━━━━━━━━━━━━━`
-X.sendMessage(anu.id,
- { text: Xbody,
- contextInfo:{
- mentionedJid:[num],
- "externalAdReply": {"showAdAttribution": true,
- "containsAutoReply": true,
- "title": ` ${global.botname}`,
-"body": `${ownername}`,
- "previewType": "PHOTO",
-"thumbnailUrl": ``,
-"thumbnail": groupleft,
-"sourceUrl": `${wagc}`}}})
-}
-}
-} catch (err) {
-console.log(err)
-}
-}
-})
+        try {
+            let metadata = await X.groupMetadata(anu.id).catch(() => null)
+            if (!metadata) return
+            let groupName = metadata.subject || 'the group'
+            let totalMembers = metadata.participants.length
+
+            for (let num of anu.participants) {
+                let numClean = num.split('@')[0].split(':')[0]
+                let ppuser = 'https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_960_720.png?q=60'
+                try { ppuser = await X.profilePictureUrl(num, 'image') } catch {}
+                let ppBuf = await getBuffer(ppuser).catch(() => null)
+
+                // ── Welcome ──────────────────────────────────────────────
+                if (global.welcome && anu.action === 'add') {
+                    let welcomeBody =
+`┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃       👋 *WELCOME!*
+┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
+
+Hey @${numClean}! 🎉
+You've just joined *${groupName}*
+
+┌─────────────────────────────
+│ 👥 Members  : ${totalMembers}
+│ 🤖 Bot      : ${global.botname}
+└─────────────────────────────
+
+_We're glad to have you here!_
+_Please read the group rules and enjoy your stay._ 😊`
+                    await X.sendMessage(anu.id, {
+                        text: welcomeBody,
+                        contextInfo: {
+                            mentionedJid: [num],
+                            externalAdReply: {
+                                showAdAttribution: true,
+                                containsAutoReply: true,
+                                title: global.botname,
+                                body: groupName,
+                                previewType: 'PHOTO',
+                                thumbnailUrl: '',
+                                thumbnail: ppBuf || Buffer.alloc(0),
+                                sourceUrl: global.wagc || ''
+                            }
+                        }
+                    })
+                }
+
+                // ── Goodbye ──────────────────────────────────────────────
+                if (global.welcome && anu.action === 'remove') {
+                    let goodbyeBody =
+`┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃       👋 *GOODBYE!*
+┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
+
+@${numClean} has left *${groupName}* 😔
+
+┌─────────────────────────────
+│ 👥 Members  : ${totalMembers}
+│ 🤖 Bot      : ${global.botname}
+└─────────────────────────────
+
+_Safe travels! You're always welcome back._ 🌟`
+                    await X.sendMessage(anu.id, {
+                        text: goodbyeBody,
+                        contextInfo: {
+                            mentionedJid: [num],
+                            externalAdReply: {
+                                showAdAttribution: true,
+                                containsAutoReply: true,
+                                title: global.botname,
+                                body: groupName,
+                                previewType: 'PHOTO',
+                                thumbnailUrl: '',
+                                thumbnail: ppBuf || Buffer.alloc(0),
+                                sourceUrl: global.wagc || ''
+                            }
+                        }
+                    })
+                }
+
+                // ── Admin Events ──────────────────────────────────────────
+                if (global.adminevent && anu.action === 'promote') {
+                    let promoteBody =
+`┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃     🌟 *ADMIN PROMOTED!*
+┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
+
+Congratulations @${numClean}! 🎊
+You have been *promoted to Admin* in
+*${groupName}*
+
+┌─────────────────────────────
+│ 🛡️ Role     : Group Admin
+│ 👥 Members  : ${totalMembers}
+└─────────────────────────────
+
+_Use your powers wisely and responsibly!_ ⚡`
+                    await X.sendMessage(anu.id, {
+                        text: promoteBody,
+                        contextInfo: {
+                            mentionedJid: [num],
+                            externalAdReply: {
+                                showAdAttribution: true,
+                                containsAutoReply: true,
+                                title: global.botname,
+                                body: groupName,
+                                previewType: 'PHOTO',
+                                thumbnailUrl: '',
+                                thumbnail: ppBuf || Buffer.alloc(0),
+                                sourceUrl: global.wagc || ''
+                            }
+                        }
+                    })
+                }
+
+                if (global.adminevent && anu.action === 'demote') {
+                    let demoteBody =
+`┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃     📉 *ADMIN DEMOTED*
+┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
+
+@${numClean} has been *demoted from Admin*
+in *${groupName}*
+
+┌─────────────────────────────
+│ 👤 Role     : Member
+│ 👥 Members  : ${totalMembers}
+└─────────────────────────────
+
+_You are now a regular member._ 🔄`
+                    await X.sendMessage(anu.id, {
+                        text: demoteBody,
+                        contextInfo: {
+                            mentionedJid: [num],
+                            externalAdReply: {
+                                showAdAttribution: true,
+                                containsAutoReply: true,
+                                title: global.botname,
+                                body: groupName,
+                                previewType: 'PHOTO',
+                                thumbnailUrl: '',
+                                thumbnail: ppBuf || Buffer.alloc(0),
+                                sourceUrl: global.wagc || ''
+                            }
+                        }
+                    })
+                }
+            }
+        } catch (err) {
+            console.log('[Group Events] Error:', err.message || err)
+        }
+    })
 //━━━━━━━━━━━━━━━━━━━━━━━━//
 // Anti-Call Handler
 X.ev.on('call', async (callData) => {
