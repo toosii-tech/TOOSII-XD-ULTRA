@@ -4014,12 +4014,51 @@ if (pairPhone.length < 7 || pairPhone.length > 15) {
 }
 try {
     await reply('🔗 _Generating pairing code, please wait..._')
-    let code = await X.requestPairingCode(pairPhone)
-    if (!code) throw new Error('No code returned')
-    // Format as XXXX-XXXX like WhatsApp shows it
-    code = code.replace(/[^A-Z0-9]/gi, '').toUpperCase()
-    let formatted = code.match(/.{1,4}/g)?.join('-') || code
-    await reply(`┏━━━━━━━━━━━━━━━━━━━━━━━┓\n┃  🔗 *PAIRING CODE READY!*\n┗━━━━━━━━━━━━━━━━━━━━━━━┛\n\n📱 *Phone:* +${pairPhone}\n\n┌─────────────────────\n│  🔑  *${formatted}*\n└─────────────────────\n\n*How to link:*\n➊ Open WhatsApp\n➋ Settings > Linked Devices\n➌ Link a Device\n➍ Link with phone number\n➎ Enter the code above\n\n⏳ _Code expires in a few minutes._`)
+
+    // ── FIX: Use a temporary isolated socket for pairing ──────────────────
+    // Calling requestPairingCode() on the active socket (X) triggers
+    // connectionReplaced and kills the current session. Instead, we spin up
+    // a fresh, in-memory-only socket that has no saved creds, request the
+    // code from that throwaway socket, then immediately close it.
+    // The active session (X) is never touched and stays connected.
+    const { default: makeTmpSocket, useMultiFileAuthState: _umfas } = require('gifted-baileys')
+    const os = require('os'), path = require('path'), fs = require('fs')
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'pair-tmp-'))
+    let tmpSock = null
+    try {
+        const { state: tmpState, saveCreds: _sc } = await _umfas(tmpDir)
+        tmpSock = makeTmpSocket({
+            auth: tmpState,
+            printQRInTerminal: false,
+            browser: Browsers.ubuntu('Chrome'),
+            logger: { level: 'silent', trace(){}, debug(){}, info(){}, warn(){}, error(){}, fatal(){}, child(){ return this } }
+        })
+        // Wait for WS handshake before requesting code
+        await new Promise((res, rej) => {
+            const t = setTimeout(() => rej(new Error('WS handshake timeout')), 12000)
+            tmpSock.ev.on('connection.update', (u) => {
+                if (u.connection === 'open' || u.isNewLogin !== undefined || (u.qr === undefined && tmpSock.ws?.readyState === 1)) {
+                    clearTimeout(t); res()
+                }
+                if (u.connection === 'close') { clearTimeout(t); rej(new Error('Temp socket closed before pairing')) }
+            })
+            // Also resolve once WS is open (readyState=1) after short delay
+            const poll = setInterval(() => {
+                if (tmpSock.ws?.readyState === 1) { clearInterval(poll); clearTimeout(t); setTimeout(res, 1500) }
+            }, 300)
+        }).catch(() => {}) // timeout is okay — ws may already be ready
+        await new Promise(r => setTimeout(r, 2000)) // brief settle delay
+        let code = await tmpSock.requestPairingCode(pairPhone)
+        if (!code) throw new Error('No code returned')
+        code = code.replace(/[^A-Z0-9]/gi, '').toUpperCase()
+        let formatted = code.match(/.{1,4}/g)?.join('-') || code
+        await reply(`┏━━━━━━━━━━━━━━━━━━━━━━━┓\n┃  🔗 *PAIRING CODE READY!*\n┗━━━━━━━━━━━━━━━━━━━━━━━┛\n\n📱 *Phone:* +${pairPhone}\n\n┌─────────────────────\n│  🔑  *${formatted}*\n└─────────────────────\n\n*How to link:*\n➊ Open WhatsApp\n➋ Settings > Linked Devices\n➌ Link a Device\n➍ Link with phone number\n➎ Enter the code above\n\n⏳ _Code expires in a few minutes._`)
+    } finally {
+        // Always destroy the temp socket and clean up its tmp dir
+        try { tmpSock?.end() } catch(_) {}
+        try { fs.rmSync(tmpDir, { recursive: true, force: true }) } catch(_) {}
+    }
+    // ── END FIX ───────────────────────────────────────────────────────────
 } catch(e) {
     let msg = (e.message || '').toLowerCase()
     if (msg.includes('bad request') || msg.includes('invalid')) {
