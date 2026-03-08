@@ -4365,10 +4365,98 @@ await X.sendMessage(m.chat, { image: { url: data.Poster }, caption: info }, { qu
 } break
 
 case 'shazam': {
-if (!m.quoted || !/audio|video/.test(m.quoted.mimetype || '')) return reply(`Reply to an audio/video with ${prefix}shazam`)
+if (!m.quoted || !/audio|video/.test(m.quoted.mimetype || '')) return reply(`┏━━━━━━━━━━━━━━━━━━━━━━━┓\n┃  🎵 *SHAZAM - SONG FINDER*\n┗━━━━━━━━━━━━━━━━━━━━━━━┛\n\nIdentify any song from an audio or video clip.\n\n*Usage:* Reply to an audio or video message with *${prefix}shazam*\n\n_Works with voice notes, music clips, videos, and audio files._`)
 try {
-reply('*Shazam:* Audio recognition is not available via free API. Try using the Shazam app directly.')
-} catch(e) { reply('Error: ' + e.message) }
+await reply('🎵 _Listening and identifying the song, please wait..._')
+// Download the media buffer
+let mediaBuf = await m.quoted.download()
+if (!mediaBuf || mediaBuf.length < 100) throw new Error('Failed to download media')
+// Save to a temp file
+let tmpFile = `/tmp/shazam_${Date.now()}.mp3`
+fs.writeFileSync(tmpFile, mediaBuf)
+// Upload to CatBox to get a public URL
+let audioUrl = await CatBox(tmpFile)
+fs.unlinkSync(tmpFile)
+if (!audioUrl || !audioUrl.startsWith('http')) throw new Error('Failed to upload audio for recognition')
+// Send to AudD music recognition API (free, no key required)
+let auddForm = new FormData()
+auddForm.append('url', audioUrl)
+auddForm.append('return', 'apple_music,spotify')
+let auddRes = await axios.post('https://api.audd.io/', auddForm, {
+    headers: { ...auddForm.getHeaders() },
+    timeout: 25000
+})
+let auddData = auddRes.data
+// If AudD returns no result, try again with the raw URL directly
+if (!auddData?.result && audioUrl) {
+    let retry = await axios.get(`https://api.audd.io/?url=${encodeURIComponent(audioUrl)}&return=apple_music,spotify`, { timeout: 20000 })
+    auddData = retry.data
+}
+if (!auddData?.result) {
+    // Fallback: try ACRCloud-compatible free endpoint
+    let fallbackForm = new FormData()
+    fallbackForm.append('url', audioUrl)
+    let fallbackRes = await axios.post('https://api.audd.io/findLyrics/', fallbackForm, {
+        headers: { ...fallbackForm.getHeaders() },
+        timeout: 20000
+    })
+    if (fallbackRes.data?.status === 'success' && fallbackRes.data?.result?.length) {
+        let topLyric = fallbackRes.data.result[0]
+        return reply(`┏━━━━━━━━━━━━━━━━━━━━━━━┓\n┃  🎵 *SONG FOUND (LYRICS MATCH)*\n┗━━━━━━━━━━━━━━━━━━━━━━━┛\n\n🎤 *Title:* ${topLyric.title || 'Unknown'}\n👤 *Artist:* ${topLyric.artist || 'Unknown'}\n\n_Full audio fingerprint match unavailable, but lyrics matched._`)
+    }
+    return reply(`┏━━━━━━━━━━━━━━━━━━━━━━━┓\n┃  🎵 *SHAZAM*\n┗━━━━━━━━━━━━━━━━━━━━━━━┛\n\n❌ *Song not recognized.*\n\n_Tips for better results:_\n• Use a longer audio clip (10–30 seconds)\n• Make sure the audio is clear with minimal background noise\n• Try a clip with the chorus or main melody`)
+}
+let r = auddData.result
+// Build response
+let lines = []
+lines.push(`┏━━━━━━━━━━━━━━━━━━━━━━━┓`)
+lines.push(`┃  🎵 *SONG IDENTIFIED!*`)
+lines.push(`┗━━━━━━━━━━━━━━━━━━━━━━━┛`)
+lines.push(``)
+lines.push(`🎤 *Title:*   ${r.title || 'Unknown'}`)
+lines.push(`👤 *Artist:*  ${r.artist || 'Unknown'}`)
+if (r.album) lines.push(`💿 *Album:*   ${r.album}`)
+if (r.release_date) lines.push(`📅 *Released:* ${r.release_date}`)
+if (r.label) lines.push(`🏷️ *Label:*   ${r.label}`)
+lines.push(``)
+// Apple Music link
+if (r.apple_music?.url) {
+    lines.push(`🍎 *Apple Music:*`)
+    lines.push(`${r.apple_music.url}`)
+    lines.push(``)
+}
+// Spotify link
+if (r.spotify?.external_urls?.spotify) {
+    lines.push(`🟢 *Spotify:*`)
+    lines.push(`${r.spotify.external_urls.spotify}`)
+    lines.push(``)
+}
+// Song preview if available
+if (r.apple_music?.previews?.[0]?.url) {
+    lines.push(`🔊 *Preview available*`)
+    lines.push(``)
+}
+lines.push(`━━━━━━━━━━━━━━━━━━━━━━━`)
+lines.push(`_Powered by TOOSII-XD ULTRA_`)
+let replyText = lines.join('\n')
+await reply(replyText)
+// Send audio preview if Apple Music preview is available
+if (r.apple_music?.previews?.[0]?.url) {
+    try {
+        let previewBuf = await getBuffer(r.apple_music.previews[0].url)
+        if (previewBuf && previewBuf.length > 1000) {
+            await X.sendMessage(m.chat, {
+                audio: previewBuf,
+                mimetype: 'audio/mp4',
+                ptt: false
+            }, { quoted: m })
+        }
+    } catch(pe) { /* Preview send failed silently */ }
+}
+} catch(e) {
+console.log('[Shazam] Error:', e.message || e)
+reply(`❌ *Shazam failed.*\n_${e.message || 'Unable to identify the song. Try again with a clearer or longer audio clip.'}_`)
+}
 } break
 
 case 'fetch':
