@@ -1819,90 +1819,124 @@ process.exit(0)
 } break
 
 //━━━━━━━━━━━━━━━━━━━━━━━━//
-// Update Command — pulls latest files from GitHub then restarts
+// Update Command — fully functional with step-by-step feedback
 case 'update': {
 if (!isOwner) return reply(mess.OnlyOwner)
-let repoUrl = global.repoUrl || ''
-if (!repoUrl) return reply(`❌ *No repo URL set!*\n\nSet your GitHub repo in *setting.js*:\n\`global.repoUrl = "https://github.com/youruser/yourrepo"\``)
-await reply(`🔃 *Checking for updates...*\n\n📦 Repo: ${repoUrl}\n⏳ _Please wait..._`)
+const repoUrl = global.repoUrl || ''
+if (!repoUrl) return reply(`❌ *No repo URL set!*\n\nAdd this to *setting.js*:\n\`global.repoUrl = "https://github.com/TOOSII102/TOOSII-XD-ULTRA"\``)
+
+// Helper: run a shell command and return { ok, stdout, stderr }
+const run = (cmd, cwd) => new Promise(resolve => {
+    exec(cmd, { cwd: cwd || __dirname, timeout: 60000 }, (err, stdout, stderr) => {
+        resolve({ ok: !err, stdout: (stdout || '').trim(), stderr: (stderr || '').trim(), err })
+    })
+})
+
+await reply(`🔃 *Checking for updates...*\n📦 _${repoUrl}_`)
+
 try {
-    // Check if git is initialized
-    let isGitRepo = await new Promise(resolve => {
-        exec('git rev-parse --is-inside-work-tree', { cwd: __dirname }, (err) => resolve(!err))
-    })
-    if (!isGitRepo) {
-        // Not a git repo — auto-initialize and fetch from the configured repo URL
-        await X.sendMessage(m.chat, { text: `⚙️ *Not a git repo. Initializing...*\n\n_Fetching latest files from GitHub, please wait..._` }, { quoted: m })
-        await new Promise(resolve => exec('git init', { cwd: __dirname }, resolve))
-        await new Promise(resolve => exec(`git remote add origin ${repoUrl}`, { cwd: __dirname }, resolve))
-        exec('git fetch origin', { cwd: __dirname }, async (fetchErr, fetchOut, fetchStderr) => {
-            if (fetchErr) {
-                return await X.sendMessage(m.chat, { text: `❌ *Failed to fetch repo.*\n\n\`\`\`${(fetchStderr||fetchErr.message||'').slice(0,400)}\`\`\`\n\n_Check that the repo is public and the URL is correct._` }, { quoted: m })
-            }
-            // Try main then master
-            exec('git reset --hard origin/main', { cwd: __dirname }, async (e1, o1, s1) => {
-                const tryBranch = e1 ? 'master' : 'main'
-                const doReset = e1
-                    ? (cb) => exec('git reset --hard origin/master', { cwd: __dirname }, cb)
-                    : (cb) => cb(null, o1, s1)
-                doReset(async (e2, o2, s2) => {
-                    if (e2) {
-                        return await X.sendMessage(m.chat, { text: `❌ *Could not find main or master branch.*\n\`\`\`${(s2||'').slice(0,300)}\`\`\`` }, { quoted: m })
-                    }
-                    exec('npm install --production', { cwd: __dirname }, async () => {
-                        await X.sendMessage(m.chat, { text: `✅ *Bot initialized & updated from GitHub!*\n\n📦 Branch: ${tryBranch}\n🔄 _Restarting now..._` }, { quoted: m })
-                        await sleep(3000)
-                        process.exit(0)
-                    })
-                })
-            })
-        })
-        return
-    }
-    // Ensure remote 'origin' points to the configured repo URL
-    await new Promise(resolve => exec(`git remote set-url origin ${repoUrl} 2>/dev/null || git remote add origin ${repoUrl}`, { cwd: __dirname }, resolve))
-    // Stash any local changes so pull doesn't fail on conflicts
-    await new Promise(resolve => exec('git stash', { cwd: __dirname }, resolve))
-    // Detect current branch, try main then master
-    let branch = await new Promise(resolve => {
-        exec('git rev-parse --abbrev-ref HEAD', { cwd: __dirname }, (err, out) => {
-            let b = (out || '').trim()
-            resolve(b && b !== 'HEAD' ? b : 'main')
-        })
-    })
-    exec(`git pull origin ${branch} --force`, { cwd: __dirname }, async (err, stdout, stderr) => {
-        let out = (stdout || '') + (stderr || '')
-        if (err) {
-            // Try the other branch
-            let alt = branch === 'main' ? 'master' : 'main'
-            exec(`git pull origin ${alt} --force`, { cwd: __dirname }, async (err2, stdout2, stderr2) => {
-                let out2 = (stdout2 || '') + (stderr2 || '')
-                if (err2) {
-                    return await X.sendMessage(m.chat, { text: `❌ *Update failed!*\n\n\`\`\`${out2.slice(0, 500)}\`\`\`` }, { quoted: m })
-                }
-                exec('npm install --production', { cwd: __dirname }, async () => {
-                    await X.sendMessage(m.chat, {
-                        text: `✅ *Bot Updated Successfully!*\n\n📋 *Changes:*\n\`\`\`${out2.slice(0, 600)}\`\`\`\n\n🔄 _Restarting now..._`
-                    }, { quoted: m })
-                    await sleep(3000)
-                    process.exit(0)
-                })
-            })
-            return
-        }
-        if (out.toLowerCase().includes('already up to date')) {
-            return await X.sendMessage(m.chat, { text: `✅ *Already up to date!*\n\n_No new updates available._\n\n📦 ${repoUrl}` }, { quoted: m })
-        }
-        exec('npm install --production', { cwd: __dirname }, async () => {
-            await X.sendMessage(m.chat, {
-                text: `✅ *Bot Updated Successfully!*\n\n📋 *Changes:*\n\`\`\`${out.slice(0, 600)}\`\`\`\n\n🔄 _Restarting now..._`
+    // ── Step 1: Ensure this is a git repo, auto-init if not ──────────
+    const gitCheck = await run('git rev-parse --is-inside-work-tree')
+    if (!gitCheck.ok) {
+        await X.sendMessage(m.chat, { text: `⚙️ *First run — initializing git...*\n\n_Cloning latest files from GitHub..._` }, { quoted: m })
+        await run('git init')
+        await run(`git remote add origin ${repoUrl}`)
+        const fetchInit = await run('git fetch origin')
+        if (!fetchInit.ok) {
+            return await X.sendMessage(m.chat, {
+                text: `❌ *Failed to reach GitHub.*\n\n\`\`\`${(fetchInit.stderr || 'Network error').slice(0, 400)}\`\`\`\n\n_Make sure the repo is public and has an internet connection._`
             }, { quoted: m })
-            await sleep(3000)
-            process.exit(0)
-        })
-    })
+        }
+        // Try main then master
+        let initBranch = 'main'
+        const tryMain = await run('git reset --hard origin/main')
+        if (!tryMain.ok) {
+            const tryMaster = await run('git reset --hard origin/master')
+            if (!tryMaster.ok) {
+                return await X.sendMessage(m.chat, { text: `❌ *Could not find main or master branch.*\n\`\`\`${tryMaster.stderr.slice(0, 300)}\`\`\`` }, { quoted: m })
+            }
+            initBranch = 'master'
+        }
+        await run('npm install --production')
+        await X.sendMessage(m.chat, {
+            text: `✅ *Bot initialized & updated!*\n\n📦 Repo: ${repoUrl}\n🌿 Branch: ${initBranch}\n\n🔄 _Restarting now..._`
+        }, { quoted: m })
+        await sleep(3000)
+        return process.exit(0)
+    }
+
+    // ── Step 2: Point remote to correct repo ─────────────────────────
+    await run(`git remote set-url origin ${repoUrl} 2>/dev/null || git remote add origin ${repoUrl}`)
+
+    // ── Step 3: Fetch latest from remote (no merge yet) ───────────────
+    await X.sendMessage(m.chat, { text: `📡 *Fetching latest from GitHub...*` }, { quoted: m })
+    const fetchResult = await run('git fetch origin')
+    if (!fetchResult.ok) {
+        return await X.sendMessage(m.chat, {
+            text: `❌ *Fetch failed — cannot reach GitHub.*\n\n\`\`\`${fetchResult.stderr.slice(0, 400)}\`\`\`\n\n_Check internet connection and that the repo is public._`
+        }, { quoted: m })
+    }
+
+    // ── Step 4: Detect branch ─────────────────────────────────────────
+    let branchRes = await run('git rev-parse --abbrev-ref HEAD')
+    let branch = branchRes.stdout && branchRes.stdout !== 'HEAD' ? branchRes.stdout : 'main'
+    // Confirm remote branch exists, fall back to master
+    const remoteBranchCheck = await run(`git ls-remote --heads origin ${branch}`)
+    if (!remoteBranchCheck.stdout) {
+        branch = branch === 'main' ? 'master' : 'main'
+    }
+
+    // ── Step 5: Compare local vs remote commit ─────────────────────────
+    const localCommit  = await run('git rev-parse HEAD')
+    const remoteCommit = await run(`git rev-parse origin/${branch}`)
+    const localHash  = localCommit.stdout.slice(0, 7)
+    const remoteHash = remoteCommit.stdout.slice(0, 7)
+
+    if (localCommit.stdout && remoteCommit.stdout && localCommit.stdout === remoteCommit.stdout) {
+        // Get last commit info to show in the "up to date" message
+        const lastLog = await run('git log -1 --format="%s | %cr" HEAD')
+        return await X.sendMessage(m.chat, {
+            text: `✅ *Already up to date!*\n\n🌿 Branch: \`${branch}\`\n🔖 Commit: \`${localHash}\`\n📝 Last: _${lastLog.stdout || 'N/A'}_\n\n_No new updates from GitHub._`
+        }, { quoted: m })
+    }
+
+    // ── Step 6: Show what's incoming ──────────────────────────────────
+    const changelog = await run(`git log HEAD..origin/${branch} --oneline --no-merges`)
+    const changeLines = changelog.stdout ? changelog.stdout.split('\n').slice(0, 10).join('\n') : 'New changes available'
+    const changeCount = changelog.stdout ? changelog.stdout.split('\n').filter(Boolean).length : '?'
+
+    await X.sendMessage(m.chat, {
+        text: `📋 *${changeCount} new commit(s) found!*\n\n\`\`\`${changeLines.slice(0, 500)}\`\`\`\n\n⬇️ _Applying update..._`
+    }, { quoted: m })
+
+    // ── Step 7: Stash local changes & pull ────────────────────────────
+    await run('git stash')
+    const pullResult = await run(`git pull origin ${branch} --force`)
+    if (!pullResult.ok) {
+        // Hard reset fallback
+        const resetResult = await run(`git reset --hard origin/${branch}`)
+        if (!resetResult.ok) {
+            return await X.sendMessage(m.chat, {
+                text: `❌ *Update failed!*\n\n\`\`\`${(pullResult.stderr || resetResult.stderr).slice(0, 500)}\`\`\``
+            }, { quoted: m })
+        }
+    }
+
+    // ── Step 8: Install new dependencies ──────────────────────────────
+    await X.sendMessage(m.chat, { text: `📦 *Installing dependencies...*` }, { quoted: m })
+    await run('npm install --production')
+
+    // ── Step 9: Done ──────────────────────────────────────────────────
+    const newCommit = await run('git rev-parse HEAD')
+    const newHash = newCommit.stdout.slice(0, 7)
+    await X.sendMessage(m.chat, {
+        text: `✅ *Bot Updated Successfully!*\n\n🌿 Branch: \`${branch}\`\n🔖 \`${localHash}\` → \`${newHash}\`\n📋 *Changes:*\n\`\`\`${changeLines.slice(0, 500)}\`\`\`\n\n🔄 _Restarting now..._`
+    }, { quoted: m })
+    await sleep(3000)
+    process.exit(0)
+
 } catch (e) {
-    reply(`❌ *Update error:* ${e.message}`)
+    await X.sendMessage(m.chat, { text: `❌ *Update error:*\n\`\`\`${e.message || e}\`\`\`` }, { quoted: m })
 }
 } break
 
