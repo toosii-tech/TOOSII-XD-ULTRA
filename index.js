@@ -280,7 +280,8 @@ fireInitQueries: true,
 generateHighQualityLinkPreview: false,
 syncFullHistory: false,
 markOnlineOnConnect: true,
-shouldIgnoreJid: jid => jid === 'status@broadcast' ? false : false,
+sendStatusReadReceipts: true,
+shouldIgnoreJid: jid => false,
 browser: ["Ubuntu", "Chrome", "20.0.04"],
 msgRetryCounterCache: msgRetryCache,
 // getMessage is critical — Baileys calls this when retrying encrypted messages.
@@ -396,37 +397,31 @@ if (mek.key && mek.key.remoteJid === 'status@broadcast') {
             let statusPosterJid = mek.key.participant || mek.key.remoteJid
             let botSelfJid = X.decodeJid(X.user.id)
 
-            // ── Auto View Status (Meta latest protocol) ─────────────
+            // ── Auto View Status (gifted-baileys 2.0.4+ protocol) ────
             if (global.autoViewStatus) {
                 try {
-                    // Meta's current WA protocol requires:
-                    // 1. readMessages with the exact status key structure
-                    // 2. sendReceipt to status@broadcast with 'read' type to register the view server-side
+                    // gifted-baileys 2.0.4+: readMessages with full status key
+                    // sendStatusReadReceipts: true in socket config handles server-side ACK automatically
                     await X.readMessages([{
                         remoteJid: 'status@broadcast',
                         id: mek.key.id,
                         participant: statusPosterJid
                     }])
-                    // sendReceipt registers the view on Meta's servers (required since ~2024 WA update)
-                    if (typeof X.sendReceipt === 'function') {
-                        await X.sendReceipt('status@broadcast', statusPosterJid, [mek.key.id], 'read')
-                    }
                     console.log(`[${phone}] ✅ Auto-viewed status from ${statusPosterJid}`)
                 } catch (viewErr) {
+                    // Fallback: try with raw key
                     try { await X.readMessages([mek.key]) } catch {}
                     console.log(`[${phone}] Auto-view fallback from ${statusPosterJid}:`, viewErr.message || viewErr)
                 }
             }
 
-            // ── Auto Like Status (Meta latest protocol) ──────────────
+            // ── Auto Like Status (gifted-baileys 2.0.4+ protocol) ────
             if (global.autoLikeStatus && global.autoLikeEmoji) {
                 try {
                     // Small delay so view receipt is registered before reaction
-                    await new Promise(r => setTimeout(r, 800))
-                    // Meta's current protocol: send reaction directly to the poster's personal JID
-                    // NOT to status@broadcast — this is the fix for the latest WA update
-                    // The key must reference the original status@broadcast message
-                    await X.sendMessage(statusPosterJid, {
+                    await new Promise(r => setTimeout(r, 1000))
+                    // Send reaction via statusJidList — required for status reactions in gifted-baileys 2.0.4+
+                    await X.sendMessage('status@broadcast', {
                         react: {
                             text: global.autoLikeEmoji,
                             key: {
@@ -436,14 +431,22 @@ if (mek.key && mek.key.remoteJid === 'status@broadcast') {
                                 fromMe: false
                             }
                         }
-                    })
+                    }, { statusJidList: [statusPosterJid, botSelfJid] })
                     console.log(`[${phone}] ✅ Auto-liked status from ${statusPosterJid} with ${global.autoLikeEmoji}`)
                 } catch (likeErr) {
-                    // Fallback: old statusJidList method (pre-2024 protocol)
+                    // Fallback: react directly to poster JID
                     try {
-                        await X.sendMessage('status@broadcast', {
-                            react: { text: global.autoLikeEmoji, key: mek.key }
-                        }, { statusJidList: [statusPosterJid, botSelfJid] })
+                        await X.sendMessage(statusPosterJid, {
+                            react: {
+                                text: global.autoLikeEmoji,
+                                key: {
+                                    remoteJid: 'status@broadcast',
+                                    id: mek.key.id,
+                                    participant: statusPosterJid,
+                                    fromMe: false
+                                }
+                            }
+                        })
                         console.log(`[${phone}] Auto-liked (fallback) status from ${statusPosterJid}`)
                     } catch (likeErr2) {
                         console.log(`[${phone}] Auto-like failed:`, likeErr2.message || likeErr2)
