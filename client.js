@@ -5991,132 +5991,261 @@ case 'fire': {
 let tmText = text || (m.quoted && (m.quoted.text || m.quoted.caption || m.quoted.body || '').trim()) || ''
 if (!tmText) return reply(`Example: ${prefix}${command} Your Text Here\n_Or reply to a message containing the text_`)
 
-// ── Style config: bg color, text color, shadow/glow color per theme ──────────
-const _tmStyles = {
-    metallic:   { bg: [30,30,40],    fg: [200,210,220], glow: [150,160,170], label: '🔩 Metallic' },
-    ice:        { bg: [10,30,60],    fg: [180,230,255], glow: [100,200,255], label: '🧊 Ice' },
-    snow:       { bg: [220,235,255], fg: [255,255,255], glow: [180,200,240], label: '❄️ Snow' },
-    impressive: { bg: [20,10,0],     fg: [255,200,50],  glow: [255,150,0],   label: '✨ Impressive' },
-    matrix:     { bg: [0,10,0],      fg: [0,255,70],    glow: [0,180,40],    label: '🖥️ Matrix' },
-    light:      { bg: [0,0,20],      fg: [255,255,200], glow: [255,230,100], label: '💡 Light' },
-    neon:       { bg: [5,0,20],      fg: [255,50,200],  glow: [200,0,255],   label: '🌟 Neon' },
-    devil:      { bg: [20,0,0],      fg: [255,50,50],   glow: [200,0,0],     label: '😈 Devil' },
-    purple:     { bg: [10,0,30],     fg: [180,100,255], glow: [120,0,255],   label: '💜 Purple' },
-    thunder:    { bg: [10,10,30],    fg: [255,255,100], glow: [200,200,0],   label: '⚡ Thunder' },
-    leaves:     { bg: [0,20,0],      fg: [100,220,80],  glow: [50,180,30],   label: '🍃 Leaves' },
-    '1917':     { bg: [40,30,20],    fg: [200,170,120], glow: [150,120,80],  label: '🎖️ 1917' },
-    arena:      { bg: [20,10,0],     fg: [255,150,50],  glow: [200,80,0],    label: '⚔️ Arena' },
-    hacker:     { bg: [0,5,0],       fg: [0,200,60],    glow: [0,255,80],    label: '👾 Hacker' },
-    sand:       { bg: [60,45,20],    fg: [220,190,120], glow: [200,160,80],  label: '🏜️ Sand' },
-    blackpink:  { bg: [10,0,10],     fg: [255,100,180], glow: [255,20,150],  label: '🌸 Blackpink' },
-    glitch:     { bg: [0,0,20],      fg: [255,0,80],    glow: [0,255,200],   label: '📺 Glitch' },
-    fire:       { bg: [20,5,0],      fg: [255,120,20],  glow: [255,50,0],    label: '🔥 Fire' }
+// ── Per-style ImageMagick render config ──────────────────────────────────────
+// Each style: bg (background hex), layers (array of {offset, color} for depth),
+// font (ImageMagick font name), blur (optional post-blur), extra (raw IM args string)
+const _tmConfigs = {
+    metallic: {
+        bg: '#12121e', font: 'DejaVu-Sans-Bold',
+        layers: [
+            { ox: 6, oy: 6, color: '#222233' },
+            { ox: 4, oy: 4, color: '#444455' },
+            { ox: 2, oy: 2, color: '#888899' },
+            { ox: 1, oy: 1, color: '#bbbbcc' },
+            { ox: 0, oy: 0, color: '#e8e8f8' }
+        ]
+    },
+    ice: {
+        bg: '#030818', font: 'DejaVu-Sans-Bold',
+        layers: [
+            { ox: 6, oy: 6, color: '#001133' },
+            { ox: 4, oy: 4, color: '#003366' },
+            { ox: 2, oy: 2, color: '#0055aa' },
+            { ox: 1, oy: 1, color: '#44aadd' },
+            { ox: 0, oy: 0, color: '#aaeeff' }
+        ]
+    },
+    snow: {
+        bg: '#c8d8f0', font: 'DejaVu-Sans-Bold',
+        layers: [
+            { ox: 5, oy: 5, color: '#8899bb' },
+            { ox: 3, oy: 3, color: '#aabbdd' },
+            { ox: 1, oy: 1, color: '#ccddf0' },
+            { ox: 0, oy: 0, color: '#ffffff' }
+        ]
+    },
+    impressive: {
+        bg: '#0d0800', font: 'DejaVu-Sans-Bold',
+        layers: [
+            { ox: 7, oy: 7, color: '#3d2000' },
+            { ox: 5, oy: 5, color: '#7a4000' },
+            { ox: 3, oy: 3, color: '#cc8800' },
+            { ox: 1, oy: 1, color: '#ffcc00' },
+            { ox: 0, oy: 0, color: '#fff0aa' }
+        ]
+    },
+    matrix: {
+        bg: '#000800', font: 'DejaVu-Sans-Mono-Bold',
+        layers: [
+            { ox: 5, oy: 5, color: '#001400' },
+            { ox: 3, oy: 3, color: '#004400' },
+            { ox: 1, oy: 1, color: '#00aa00' },
+            { ox: 0, oy: 0, color: '#00ff41' }
+        ]
+    },
+    light: {
+        bg: '#000010', font: 'DejaVu-Sans-Bold',
+        layers: [
+            { ox: -6, oy: -6, color: '#444400' },
+            { ox: -4, oy: -4, color: '#888800' },
+            { ox: -2, oy: -2, color: '#cccc00' },
+            { ox: 6, oy: 6, color: '#444400' },
+            { ox: 4, oy: 4, color: '#888800' },
+            { ox: 2, oy: 2, color: '#cccc00' },
+            { ox: 0, oy: 0, color: '#ffffcc' }
+        ], blur: '0x2'
+    },
+    neon: {
+        bg: '#05001a', font: 'DejaVu-Sans-Bold',
+        layers: [
+            { ox: 6, oy: 0, color: '#aa0088' },
+            { ox: -6, oy: 0, color: '#aa0088' },
+            { ox: 0, oy: 6, color: '#aa0088' },
+            { ox: 0, oy: -6, color: '#aa0088' },
+            { ox: 4, oy: 4, color: '#cc00cc' },
+            { ox: -4, oy: -4, color: '#cc00cc' },
+            { ox: 0, oy: 0, color: '#ff88ff' }
+        ], blur: '0x1'
+    },
+    devil: {
+        bg: '#100000', font: 'DejaVu-Sans-Bold',
+        layers: [
+            { ox: 7, oy: 7, color: '#330000' },
+            { ox: 5, oy: 5, color: '#660000' },
+            { ox: 3, oy: 3, color: '#aa0000' },
+            { ox: 1, oy: 1, color: '#dd2200' },
+            { ox: 0, oy: 0, color: '#ff5533' }
+        ]
+    },
+    purple: {
+        bg: '#080010', font: 'DejaVu-Sans-Bold',
+        layers: [
+            { ox: 6, oy: 6, color: '#110033' },
+            { ox: 4, oy: 4, color: '#330066' },
+            { ox: 2, oy: 2, color: '#6600cc' },
+            { ox: 1, oy: 1, color: '#9933ff' },
+            { ox: 0, oy: 0, color: '#cc99ff' }
+        ]
+    },
+    thunder: {
+        bg: '#050510', font: 'DejaVu-Sans-Bold',
+        layers: [
+            { ox: 6, oy: 6, color: '#222200' },
+            { ox: 4, oy: 4, color: '#666600' },
+            { ox: 2, oy: 2, color: '#aaaa00' },
+            { ox: 1, oy: 1, color: '#ffff00' },
+            { ox: 0, oy: 0, color: '#ffffaa' }
+        ], blur: '0x1'
+    },
+    leaves: {
+        bg: '#001500', font: 'DejaVu-Sans-Bold',
+        layers: [
+            { ox: 6, oy: 6, color: '#001a00' },
+            { ox: 4, oy: 4, color: '#003300' },
+            { ox: 2, oy: 2, color: '#116600' },
+            { ox: 1, oy: 1, color: '#33aa00' },
+            { ox: 0, oy: 0, color: '#88ee44' }
+        ]
+    },
+    '1917': {
+        bg: '#1a1008', font: 'Bitstream-Charter-Bold',
+        layers: [
+            { ox: 5, oy: 5, color: '#2a1a08' },
+            { ox: 3, oy: 3, color: '#6b4420' },
+            { ox: 1, oy: 1, color: '#aa7744' },
+            { ox: 0, oy: 0, color: '#d4a96a' }
+        ]
+    },
+    arena: {
+        bg: '#100800', font: 'DejaVu-Sans-Bold',
+        layers: [
+            { ox: 7, oy: 7, color: '#2a1000' },
+            { ox: 5, oy: 5, color: '#6a2800' },
+            { ox: 3, oy: 3, color: '#cc5500' },
+            { ox: 1, oy: 1, color: '#ff8800' },
+            { ox: 0, oy: 0, color: '#ffcc88' }
+        ]
+    },
+    hacker: {
+        bg: '#000300', font: 'DejaVu-Sans-Mono-Bold',
+        layers: [
+            { ox: 3, oy: 3, color: '#002200' },
+            { ox: 1, oy: 1, color: '#006600' },
+            { ox: 0, oy: 0, color: '#00ff00' }
+        ]
+    },
+    sand: {
+        bg: '#1a1005', font: 'Bitstream-Charter-Bold',
+        layers: [
+            { ox: 6, oy: 6, color: '#3a2a10' },
+            { ox: 4, oy: 4, color: '#7a5a28' },
+            { ox: 2, oy: 2, color: '#c09050' },
+            { ox: 1, oy: 1, color: '#d4aa70' },
+            { ox: 0, oy: 0, color: '#eedd99' }
+        ]
+    },
+    blackpink: {
+        bg: '#0a000a', font: 'DejaVu-Sans-Bold',
+        layers: [
+            { ox: 6, oy: 6, color: '#330033' },
+            { ox: 4, oy: 4, color: '#880044' },
+            { ox: 2, oy: 2, color: '#cc0066' },
+            { ox: 1, oy: 1, color: '#ff44aa' },
+            { ox: 0, oy: 0, color: '#ffbbdd' }
+        ]
+    },
+    glitch: {
+        bg: '#000010', font: 'DejaVu-Sans-Mono-Bold',
+        layers: [
+            { ox: -5, oy: 0, color: '#ff0000' },
+            { ox: 5, oy: 0, color: '#00ffff' },
+            { ox: 0, oy: 0, color: '#ffffff' }
+        ]
+    },
+    fire: {
+        bg: '#0d0200', font: 'DejaVu-Sans-Bold',
+        layers: [
+            { ox: 7, oy: 7, color: '#330000' },
+            { ox: 5, oy: 5, color: '#881100' },
+            { ox: 3, oy: 3, color: '#cc4400' },
+            { ox: 2, oy: 2, color: '#ff6600' },
+            { ox: 1, oy: 1, color: '#ffaa00' },
+            { ox: 0, oy: 0, color: '#ffee88' }
+        ]
+    }
 }
 
-const _st = _tmStyles[command] || _tmStyles.neon
-const _tmCaption = `${_st.label} Text: ${tmText}`
+const _cfg = _tmConfigs[command] || _tmConfigs.neon
+const _label = command.charAt(0).toUpperCase() + command.slice(1)
+const _caption = `*${_label} Text:* ${tmText}`
 
 try {
-    const Jimp = require('jimp')
-    const W = 900, H = 300
-    const img = new Jimp(W, H)
+    const { exec } = require('child_process')
+    const _fs = require('fs')
+    const _path = require('path')
+    const _os = require('os')
 
-    // Fill background
-    const [br, bg, bb] = _st.bg
-    for (let y = 0; y < H; y++) {
-        for (let x = 0; x < W; x++) {
-            // Subtle gradient: slightly lighter at center
-            const dx = (x - W/2) / W, dy = (y - H/2) / H
-            const fade = Math.max(0, 1 - (dx*dx + dy*dy) * 2)
-            const r = Math.min(255, br + fade * 20) | 0
-            const g = Math.min(255, bg + fade * 20) | 0
-            const b = Math.min(255, bb + fade * 20) | 0
-            img.setPixelColor(Jimp.rgbaToInt(r, g, b, 255), x, y)
-        }
-    }
+    // Sanitize text for shell: escape double quotes and backslashes
+    const _safe = tmText.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/`/g, '\\`').replace(/\$/g, '\\$')
 
-    // Load built-in font — jimp ships with bitmap fonts, no external files needed
-    const font = await Jimp.loadFont(Jimp.FONT_SANS_64_WHITE)
-    const fontSm = await Jimp.loadFont(Jimp.FONT_SANS_32_WHITE)
+    // Build ImageMagick annotate layers
+    const _layers = _cfg.layers.map(l =>
+        `-fill "${l.color}" -annotate ${l.ox >= 0 ? '+' : ''}${l.ox}${l.oy >= 0 ? '+' : ''}${l.oy} "${_safe}"`
+    ).join(' \\\n  ')
 
-    // Measure text width to center it
-    const tw = Jimp.measureText(font, tmText)
-    const th = Jimp.measureTextHeight(font, tmText, W - 40)
-    const tx = Math.max(20, (W - Math.min(tw, W - 40)) / 2)
-    const ty = (H - th) / 2
+    const _blur = _cfg.blur ? `-blur ${_cfg.blur}` : ''
+    const _outFile = _path.join(_os.tmpdir(), `tm_${Date.now()}_${Math.random().toString(36).slice(2)}.jpg`)
 
-    // Draw glow layers (offset copies in glow color for bloom effect)
-    const glowImg = new Jimp(W, H, 0x00000000)
-    const offsets = [[-3,0],[3,0],[0,-3],[0,3],[-2,-2],[2,2],[-2,2],[2,-2]]
-    for (const [ox, oy] of offsets) {
-        glowImg.print(font, tx + ox, ty + oy, { text: tmText, alignmentX: Jimp.HORIZONTAL_ALIGN_LEFT }, W - 40, H)
-    }
-    // Tint glow to theme color
-    glowImg.scan(0, 0, W, H, function(x, y, idx) {
-        if (this.bitmap.data[idx + 3] > 0) {
-            this.bitmap.data[idx]     = _st.glow[0]
-            this.bitmap.data[idx + 1] = _st.glow[1]
-            this.bitmap.data[idx + 2] = _st.glow[2]
-        }
+    const _cmd = [
+        'convert',
+        '-size 900x280',
+        `xc:"${_cfg.bg}"`,
+        `-font ${_cfg.font}`,
+        '-pointsize 110',
+        '-gravity Center',
+        _layers,
+        _blur,
+        '-quality 92',
+        `"${_outFile}"`
+    ].filter(Boolean).join(' ')
+
+    await new Promise((resolve, reject) => {
+        exec(_cmd, { timeout: 15000 }, (err, stdout, stderr) => {
+            if (err) reject(new Error(stderr || err.message))
+            else resolve()
+        })
     })
-    img.composite(glowImg, 0, 0, { mode: Jimp.BLEND_SCREEN, opacitySource: 0.6, opacityDest: 1 })
 
-    // Draw main text in theme fg color
-    const textImg = new Jimp(W, H, 0x00000000)
-    textImg.print(font, tx, ty, { text: tmText, alignmentX: Jimp.HORIZONTAL_ALIGN_LEFT }, W - 40, H)
-    textImg.scan(0, 0, W, H, function(x, y, idx) {
-        if (this.bitmap.data[idx + 3] > 0) {
-            this.bitmap.data[idx]     = _st.fg[0]
-            this.bitmap.data[idx + 1] = _st.fg[1]
-            this.bitmap.data[idx + 2] = _st.fg[2]
-        }
-    })
-    img.composite(textImg, 0, 0)
+    const _buf = _fs.readFileSync(_outFile)
+    try { _fs.unlinkSync(_outFile) } catch {}
 
-    // Special effects per style
-    if (command === 'glitch') {
-        // Horizontal RGB split on a random strip
-        for (let i = 0; i < 8; i++) {
-            const gy = Math.floor(Math.random() * H)
-            const gh = Math.floor(Math.random() * 6) + 2
-            const shift = Math.floor(Math.random() * 12) - 6
-            for (let y2 = gy; y2 < Math.min(H, gy + gh); y2++) {
-                for (let x2 = 0; x2 < W; x2++) {
-                    const sx = Math.max(0, Math.min(W - 1, x2 + shift))
-                    const c = img.getPixelColor(sx, y2)
-                    const {r, g, b, a} = Jimp.intToRGBA(c)
-                    img.setPixelColor(Jimp.rgbaToInt(r, 0, b, a), x2, y2)
-                }
-            }
-        }
-    }
-    if (command === 'matrix' || command === 'hacker') {
-        // Scanlines
-        for (let y2 = 0; y2 < H; y2 += 3) {
-            for (let x2 = 0; x2 < W; x2++) {
-                const c = Jimp.intToRGBA(img.getPixelColor(x2, y2))
-                img.setPixelColor(Jimp.rgbaToInt(c.r * 0.7 | 0, c.g * 0.7 | 0, c.b * 0.7 | 0, 255), x2, y2)
-            }
-        }
-    }
+    if (!_buf || _buf.length < 3000) throw new Error('Render produced empty image')
 
-    // Small label bottom-right
-    img.print(fontSm, W - 220, H - 40, _st.label)
-
-    const _buf = await img.getBufferAsync(Jimp.MIME_JPEG)
-    await X.sendMessage(m.chat, { image: _buf, caption: _tmCaption }, { quoted: m })
+    await X.sendMessage(m.chat, { image: _buf, caption: _caption }, { quoted: m })
 
 } catch(e) {
-    // Final fallback: try pollinations, if that fails tell user
+    // Fallback: jimp flat render if ImageMagick fails
     try {
-        const _prompt = encodeURIComponent(`stylized 3D text "${tmText}", ${_st.label} effect, dark background, typography`)
-        const _seed = Math.floor(Math.random() * 999999)
-        const _buf2 = await getBuffer(`https://image.pollinations.ai/prompt/${_prompt}?model=flux&width=900&height=300&seed=${_seed}&nologo=true`)
-        if (_buf2 && _buf2.length > 5000) {
-            await X.sendMessage(m.chat, { image: _buf2, caption: _tmCaption }, { quoted: m })
-        } else throw new Error('empty')
-    } catch {
-        reply(`❌ *Text maker failed:* ${e.message}\n_Try again or check bot logs._`)
+        const Jimp = require('jimp')
+        const [br, bg2, bb] = [parseInt(_cfg.bg.slice(1,3),16), parseInt(_cfg.bg.slice(3,5),16), parseInt(_cfg.bg.slice(5,7),16)]
+        const img = new Jimp(900, 280, Jimp.rgbaToInt(br, bg2, bb, 255))
+        const font = await Jimp.loadFont(Jimp.FONT_SANS_64_WHITE)
+        const tw = Jimp.measureText(font, tmText)
+        const tx = Math.max(10, (900 - Math.min(tw, 860)) / 2)
+        const th = Jimp.measureTextHeight(font, tmText, 860)
+        const ty = (280 - th) / 2
+        img.print(font, tx, ty, { text: tmText, alignmentX: Jimp.HORIZONTAL_ALIGN_LEFT }, 860, 280)
+        const topColor = _cfg.layers[_cfg.layers.length - 1].color
+        const tr = parseInt(topColor.slice(1,3),16), tg = parseInt(topColor.slice(3,5),16), tb2 = parseInt(topColor.slice(5,7),16)
+        img.scan(0, 0, 900, 280, function(x, y, idx) {
+            if (this.bitmap.data[idx+3] > 10) {
+                this.bitmap.data[idx] = tr; this.bitmap.data[idx+1] = tg; this.bitmap.data[idx+2] = tb2
+            }
+        })
+        const _buf2 = await img.getBufferAsync(Jimp.MIME_JPEG)
+        await X.sendMessage(m.chat, { image: _buf2, caption: _caption }, { quoted: m })
+    } catch(e2) {
+        reply(`❌ Text maker error: ${e.message}`)
     }
 }
 } break
