@@ -55,6 +55,60 @@ const {
         uploadImage
 } = require('./library/scrape/uploader');
 
+//━━━━━━━━━━━━━━━━━━━━━━━━//
+// ChatBoAI core function — Anthropic API primary, Pollinations fallback
+// Always responds in English regardless of input language
+async function _runChatBoAI(userMsg, isAutoMode = false) {
+    const _sys = isAutoMode
+        ? `You are a friendly WhatsApp assistant. Always reply in English only, regardless of the language the user writes in. Keep replies short and conversational — 2 to 4 sentences max. Never use markdown formatting like ** or ##.`
+        : `You are ChatBoAI, a smart and helpful assistant. Always reply in English only, no matter what language the user writes in. Be clear, accurate, and helpful. Avoid markdown formatting.`
+
+    // 1. Anthropic Claude API (most reliable)
+    try {
+        const { default: fetch } = require('node-fetch')
+        const _r1 = await fetch('https://api.anthropic.com/v1/messages', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'x-api-key': process.env.ANTHROPIC_API_KEY || '',
+                'anthropic-version': '2023-06-01'
+            },
+            body: JSON.stringify({
+                model: 'claude-haiku-4-5-20251001',
+                max_tokens: 500,
+                system: _sys,
+                messages: [{ role: 'user', content: userMsg }]
+            }),
+            signal: AbortSignal.timeout(15000)
+        })
+        const _d1 = await _r1.json()
+        const _t1 = _d1?.content?.[0]?.text?.trim()
+        if (_t1?.length > 2) return _t1
+    } catch {}
+
+    // 2. Pollinations OpenAI-compatible (free, no key needed)
+    try {
+        const axios = require('axios')
+        const { data: _d2 } = await axios.post('https://text.pollinations.ai/openai', {
+            model: 'openai',
+            messages: [{ role: 'system', content: _sys }, { role: 'user', content: userMsg }],
+            stream: false
+        }, { headers: { 'Content-Type': 'application/json' }, timeout: 15000 })
+        const _t2 = _d2?.choices?.[0]?.message?.content?.trim()
+        if (_t2?.length > 2) return _t2
+    } catch {}
+
+    // 3. Pollinations GET fallback
+    try {
+        const axios = require('axios')
+        const _p3 = encodeURIComponent(`${_sys}\n\nUser: ${userMsg}\n\nAssistant:`)
+        const { data: _d3 } = await axios.get(`https://text.pollinations.ai/${_p3}`, { timeout: 12000, responseType: 'text' })
+        if (_d3 && typeof _d3 === 'string' && _d3.trim().length > 2) return _d3.trim()
+    } catch {}
+
+    throw new Error('All AI services unavailable')
+}
+
 module.exports = async (X, m) => {
 try {
 const from = m.key.remoteJid
@@ -1722,17 +1776,19 @@ break
 
 case 'chatbot':
 case 'setchatbot': {
+// Owner can toggle globally; group admins/members can toggle per-chat via chatboai
 if (!isOwner) return reply(mess.OnlyOwner)
 let cbArg = (args[0] || '').toLowerCase()
 if (!cbArg) {
-    let cbState = global.chatBot ? 'ON' : 'OFF'
-    reply(`*ChatBot Mode: ${cbState}*\nWhen ON, the bot will automatically reply to all non-command messages using AI.\n\nUsage:\n${prefix}chatbot on\n${prefix}chatbot off`)
+    let cbState = global.chatBot ? '✅ ON' : '❌ OFF'
+    let cbaChats = Object.keys(global.chatBoAIChats || {}).length
+    reply(`*🤖 ChatBot Status*\n\n• Global ChatBot: *${cbState}*\n• ChatBoAI active chats: *${cbaChats}*\n\n*Commands:*\n• ${prefix}chatbot on — global auto-reply (all chats)\n• ${prefix}chatbot off — disable global auto-reply\n• ${prefix}chatboai on — enable AI replies in *this chat only*\n• ${prefix}chatboai off — disable AI replies in this chat\n• ${prefix}chatboai [question] — one-shot AI question`)
 } else if (cbArg === 'on' || cbArg === 'enable') {
     global.chatBot = true
-    reply('*ChatBot Mode ON*\nBot will auto-reply to all messages using AI.')
+    reply('*🤖 ChatBot: ✅ ON*\n_Bot will now auto-reply to all messages in English using AI._\n\n_Use_ ' + prefix + 'chatbot off _to stop._')
 } else if (cbArg === 'off' || cbArg === 'disable') {
     global.chatBot = false
-    reply('*ChatBot Mode OFF*')
+    reply('*🤖 ChatBot: ❌ OFF*\n_Global auto-replies disabled._')
 }
 }
 break
@@ -3129,21 +3185,95 @@ case 'aoyoai':{
 };
 break
 case 'chatbotai':{  
-  if (!text) return reply('Please enter your question?');
+  if (!text) return reply(`Please enter your question.\nExample: ${prefix}chatbotai What is the capital of France?`);
   try {
-    let result = null
-    try {
-      let { data } = await axios.get(`https://www.abella.icu/onlinechatbot?q=${encodeURIComponent(text)}`, { timeout: 15000 });
-      if (data?.data?.answer?.data) result = data.data.answer.data
-    } catch {}
-    if (!result) {
-      let { data } = await axios.post('https://text.pollinations.ai/openai', { messages: [{ role: 'system', content: 'You are ChatBot AI, a friendly conversational assistant.' }, { role: 'user', content: text }], stream: false }, { headers: { 'Content-Type': 'application/json' } })
-      result = data?.choices?.[0]?.message?.content
+    await react('🤖')
+    const _sysPrompt = `You are ChatBot AI, a helpful assistant. Always respond in English only regardless of what language the user writes in. Be clear, friendly, and concise.`
+    let _aiResult = null
+
+    // 1. chatai.org (no auth needed)
+    if (!_aiResult) {
+      try {
+        const { data: _d1 } = await axios.post('https://chatai.org/api/chat',
+          { messages: [{ role: 'user', content: text }] },
+          { headers: { Origin: 'https://chatai.org', Referer: 'https://chatai.org/' }, timeout: 15000 })
+        if (_d1?.content?.trim()?.length > 2) _aiResult = _d1.content.trim()
+      } catch {}
     }
-    reply(result || 'No response.')
-  } catch (e) { reply('Error: ' + (e.message || 'Failed')) }
+
+    // 2. Pollinations POST (OpenAI-compatible, free)
+    if (!_aiResult) {
+      try {
+        const { data: _d2 } = await axios.post('https://text.pollinations.ai/openai', {
+          model: 'openai',
+          messages: [{ role: 'system', content: _sysPrompt }, { role: 'user', content: text }],
+          stream: false
+        }, { headers: { 'Content-Type': 'application/json' }, timeout: 15000 })
+        const _r2 = _d2?.choices?.[0]?.message?.content?.trim()
+        if (_r2?.length > 2) _aiResult = _r2
+      } catch {}
+    }
+
+    // 3. Pollinations GET (simplest fallback)
+    if (!_aiResult) {
+      try {
+        const _p3 = encodeURIComponent(`${_sysPrompt}\n\nUser: ${text}\n\nAssistant:`)
+        const { data: _d3 } = await axios.get(`https://text.pollinations.ai/${_p3}`, { timeout: 15000, responseType: 'text' })
+        if (_d3 && typeof _d3 === 'string' && _d3.trim().length > 2) _aiResult = _d3.trim()
+      } catch {}
+    }
+
+    // 4. GitHub AI (if token set) — updated to correct endpoint
+    if (!_aiResult && process.env.GITHUB_AI_TOKEN) {
+      try {
+        const { data: _d4 } = await axios.post('https://models.github.ai/inference/chat/completions', {
+          model: 'gpt-4o-mini',
+          messages: [{ role: 'system', content: _sysPrompt }, { role: 'user', content: text }],
+          max_tokens: 600
+        }, { headers: { 'Authorization': `Bearer ${process.env.GITHUB_AI_TOKEN}`, 'Content-Type': 'application/json' }, timeout: 15000 })
+        const _r4 = _d4?.choices?.[0]?.message?.content?.trim()
+        if (_r4?.length > 2) _aiResult = _r4
+      } catch {}
+    }
+
+    if (_aiResult?.trim()) {
+      reply(`🤖 *ChatBot AI*\n\n${_aiResult.trim()}`)
+    } else {
+      reply('❌ All AI services are currently unavailable. Please try again in a moment.')
+    }
+  } catch (e) { reply('❌ ChatBot AI error: ' + (e.message || 'Unknown').slice(0, 100)) }
 };
 break
+
+//━━━━━━━━━━━━━━━━━━━━━━━━//
+// ChatBoAI — English-only AI, per-message or toggled per-chat
+case 'chatboai':
+case 'aichat': {
+let _cbaArg = (args[0] || '').toLowerCase()
+
+// Toggle on/off — owner or group admin only
+if (_cbaArg === 'on' || _cbaArg === 'enable') {
+    if (!isOwner && !isAdmin) return reply('🔒 Only the owner or group admins can toggle ChatBoAI.')
+    if (!global.chatBoAIChats) global.chatBoAIChats = {}
+    global.chatBoAIChats[m.chat] = true
+    return reply(`*🤖 ChatBoAI: ✅ ON*\n\n_I'll now auto-reply to every message in this chat in English._\n_Send *${prefix}chatboai off* to stop._`)
+}
+if (_cbaArg === 'off' || _cbaArg === 'disable') {
+    if (!isOwner && !isAdmin) return reply('🔒 Only the owner or group admins can toggle ChatBoAI.')
+    if (global.chatBoAIChats) delete global.chatBoAIChats[m.chat]
+    return reply(`*🤖 ChatBoAI: ❌ OFF*\n_Auto-replies stopped in this chat._`)
+}
+
+// One-shot question — open to all users
+let _cbaQ = text || (m.quoted && (m.quoted.text || m.quoted.body || m.quoted.caption || '').trim()) || ''
+if (!_cbaQ) return reply(`*🤖 ChatBoAI — AI in English*\n\nAsk anything and I'll always reply in English.\n\n*Usage:*\n• ${prefix}chatboai [your question]\n• ${prefix}chatboai on — auto-reply all messages in this chat\n• ${prefix}chatboai off — stop auto-replies`)
+
+await react('🤖')
+try {
+    let _cbaReply = await _runChatBoAI(_cbaQ, false)
+    reply(`🤖 *ChatBoAI*\n\n${_cbaReply}`)
+} catch(e) { reply('❌ ChatBoAI error: ' + (e.message || 'Unknown').slice(0, 100)) }
+} break
 case 'blackbox-pro':{  
   if (!text) return reply('Please enter your question?');
   try {
@@ -6357,26 +6487,25 @@ if (stdout) return reply(stdout)
 })
 }
 
-if (global.chatBot && budy && !budy.startsWith('>') && !budy.startsWith('=>') && !budy.startsWith('$') && !isCmd && !m.key.fromMe) {
+// ── ChatBoAI per-chat auto-reply (.chatboai on/off) ─────────────────
+if (global.chatBoAIChats && global.chatBoAIChats[m.chat] && budy && !isCmd && !m.key.fromMe) {
     try {
-        let aiToken = process.env.GITHUB_AI_TOKEN
-        if (aiToken) {
-            let chatResponse = await axios.post('https://models.inference.ai.azure.com/chat/completions', {
-                messages: [
-                    { role: 'system', content: `You are ${global.botname}, a friendly and helpful WhatsApp bot assistant created by ${global.ownername}. Keep responses short and conversational.` },
-                    { role: 'user', content: budy }
-                ],
-                model: 'gpt-4.1-mini',
-                temperature: 0.7,
-                max_tokens: 500
-            }, {
-                headers: {
-                    'Authorization': `Bearer ${aiToken}`,
-                    'Content-Type': 'application/json'
-                }
-            })
-            let aiReply = chatResponse.data.choices[0].message.content
-            if (aiReply) reply(aiReply)
+        await react('🤖')
+        const _cbaAutoReply = await _runChatBoAI(budy, true)
+        reply(`${_cbaAutoReply}`)
+    } catch (e) {
+        console.log('[ChatBoAI-Auto] Error:', e.message || e)
+    }
+}
+
+// ── ChatBot global auto-reply (.chatbot on/off) — uses _runChatBoAI ──
+if (global.chatBot && budy && !budy.startsWith('>') && !budy.startsWith('=>') && !budy.startsWith('$') && !isCmd && !m.key.fromMe && !(global.chatBoAIChats && global.chatBoAIChats[m.chat])) {
+    try {
+        const _cbReply = await _runChatBoAI(budy, true)
+        if (_cbReply?.trim()) {
+            reply(_cbReply.trim())
+        } else {
+            reply('❌ AI is unavailable right now. Try again in a moment.')
         }
     } catch (chatErr) {
         console.log('[ChatBot] Error:', chatErr.message || chatErr)
