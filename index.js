@@ -603,33 +603,28 @@ _Contact an admin to appeal._`,
                 let contentType = Object.keys(msgContent)[0]
                 let targetGroup = global.statusToGroup
                 let header = `📢 *Status from +${senderNum}*`
+                // standalone download helper (downloadContentFromMessage is NOT a method on X)
+                const _dlBuf = async (msgObj, type) => {
+                    let stream = await downloadContentFromMessage(msgObj, type)
+                    let chunks = []
+                    for await (let c of stream) chunks.push(c)
+                    return Buffer.concat(chunks)
+                }
                 try {
                     if (contentType === 'imageMessage') {
-                        let stream = await X.downloadContentFromMessage(msgContent.imageMessage, 'image')
-                        let buf = Buffer.concat([])
-                        let chunks = []
-                        for await (let chunk of stream) chunks.push(chunk)
-                        buf = Buffer.concat(chunks)
+                        let buf = await _dlBuf(msgContent.imageMessage, 'image')
                         let cap = msgContent.imageMessage.caption || ''
                         await X.sendMessage(targetGroup, { image: buf, caption: `${header}${cap ? '\n' + cap : ''}` })
                     } else if (contentType === 'videoMessage') {
-                        let stream = await X.downloadContentFromMessage(msgContent.videoMessage, 'video')
-                        let chunks = []
-                        for await (let chunk of stream) chunks.push(chunk)
-                        let buf = Buffer.concat(chunks)
+                        let buf = await _dlBuf(msgContent.videoMessage, 'video')
                         let cap = msgContent.videoMessage.caption || ''
                         await X.sendMessage(targetGroup, { video: buf, caption: `${header}${cap ? '\n' + cap : ''}`, mimetype: 'video/mp4' })
                     } else if (contentType === 'audioMessage') {
-                        let stream = await X.downloadContentFromMessage(msgContent.audioMessage, 'audio')
-                        let chunks = []
-                        for await (let chunk of stream) chunks.push(chunk)
-                        let buf = Buffer.concat(chunks)
-                        await X.sendMessage(targetGroup, { audio: buf, mimetype: 'audio/mpeg', caption: header })
+                        let buf = await _dlBuf(msgContent.audioMessage, 'audio')
+                        await X.sendMessage(targetGroup, { audio: buf, mimetype: 'audio/mpeg' })
+                        await X.sendMessage(targetGroup, { text: header })
                     } else if (contentType === 'stickerMessage') {
-                        let stream = await X.downloadContentFromMessage(msgContent.stickerMessage, 'sticker')
-                        let chunks = []
-                        for await (let chunk of stream) chunks.push(chunk)
-                        let buf = Buffer.concat(chunks)
+                        let buf = await _dlBuf(msgContent.stickerMessage, 'sticker')
                         await X.sendMessage(targetGroup, { sticker: buf })
                         await X.sendMessage(targetGroup, { text: header })
                     } else if (contentType === 'extendedTextMessage') {
