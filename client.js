@@ -6179,74 +6179,46 @@ const _cfg = _tmConfigs[command] || _tmConfigs.neon
 const _label = command.charAt(0).toUpperCase() + command.slice(1)
 const _caption = `*${_label} Text:* ${tmText}`
 
+const { execSync: _execSync } = require('child_process')
+const _fs = require('fs')
+const _path = require('path')
+const _os = require('os')
+
+// Dynamic pointsize — scales down for longer text so it always fits
+const _tlen = tmText.length
+const _pt = _tlen <= 6 ? 160 : _tlen <= 10 ? 130 : _tlen <= 15 ? 105 : _tlen <= 22 ? 80 : _tlen <= 32 ? 60 : 45
+
+// Sanitize text for shell — strip/replace problematic chars
+const _safe = tmText
+    .replace(/\\/g, '')
+    .replace(/"/g, "'")
+    .replace(/`/g, "'")
+    .replace(/\$/g, 'S')
+    .replace(/\n/g, ' ')
+    .trim()
+
+// Build layer args — flat join with spaces only (NO \n — breaks exec)
+const _layerArgs = _cfg.layers.map(l => {
+    const ox = (l.ox >= 0 ? '+' : '') + l.ox
+    const oy = (l.oy >= 0 ? '+' : '') + l.oy
+    return `-fill "${l.color}" -annotate ${ox}${oy} "${_safe}"`
+}).join(' ')
+
+const _blurArg = _cfg.blur ? `-blur ${_cfg.blur}` : ''
+const _outFile = _path.join(_os.tmpdir(), `tm_${Date.now()}.jpg`)
+
+// Single clean command — no shell continuation chars
+const _cmd = `convert -size 1024x400 xc:"${_cfg.bg}" -font ${_cfg.font} -pointsize ${_pt} -gravity Center ${_layerArgs}${_blurArg ? ' ' + _blurArg : ''} -quality 92 "${_outFile}"`
+
 try {
-    const { exec } = require('child_process')
-    const _fs = require('fs')
-    const _path = require('path')
-    const _os = require('os')
-
-    // Sanitize text for shell: escape double quotes and backslashes
-    const _safe = tmText.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/`/g, '\\`').replace(/\$/g, '\\$')
-
-    // Build ImageMagick annotate layers
-    const _layers = _cfg.layers.map(l =>
-        `-fill "${l.color}" -annotate ${l.ox >= 0 ? '+' : ''}${l.ox}${l.oy >= 0 ? '+' : ''}${l.oy} "${_safe}"`
-    ).join(' \\\n  ')
-
-    const _blur = _cfg.blur ? `-blur ${_cfg.blur}` : ''
-    const _outFile = _path.join(_os.tmpdir(), `tm_${Date.now()}_${Math.random().toString(36).slice(2)}.jpg`)
-
-    const _cmd = [
-        'convert',
-        '-size 900x280',
-        `xc:"${_cfg.bg}"`,
-        `-font ${_cfg.font}`,
-        '-pointsize 110',
-        '-gravity Center',
-        _layers,
-        _blur,
-        '-quality 92',
-        `"${_outFile}"`
-    ].filter(Boolean).join(' ')
-
-    await new Promise((resolve, reject) => {
-        exec(_cmd, { timeout: 15000 }, (err, stdout, stderr) => {
-            if (err) reject(new Error(stderr || err.message))
-            else resolve()
-        })
-    })
-
+    _execSync(_cmd, { timeout: 15000 })
     const _buf = _fs.readFileSync(_outFile)
     try { _fs.unlinkSync(_outFile) } catch {}
-
-    if (!_buf || _buf.length < 3000) throw new Error('Render produced empty image')
-
+    if (!_buf || _buf.length < 2000) throw new Error('Empty render')
     await X.sendMessage(m.chat, { image: _buf, caption: _caption }, { quoted: m })
-
 } catch(e) {
-    // Fallback: jimp flat render if ImageMagick fails
-    try {
-        const Jimp = require('jimp')
-        const [br, bg2, bb] = [parseInt(_cfg.bg.slice(1,3),16), parseInt(_cfg.bg.slice(3,5),16), parseInt(_cfg.bg.slice(5,7),16)]
-        const img = new Jimp(900, 280, Jimp.rgbaToInt(br, bg2, bb, 255))
-        const font = await Jimp.loadFont(Jimp.FONT_SANS_64_WHITE)
-        const tw = Jimp.measureText(font, tmText)
-        const tx = Math.max(10, (900 - Math.min(tw, 860)) / 2)
-        const th = Jimp.measureTextHeight(font, tmText, 860)
-        const ty = (280 - th) / 2
-        img.print(font, tx, ty, { text: tmText, alignmentX: Jimp.HORIZONTAL_ALIGN_LEFT }, 860, 280)
-        const topColor = _cfg.layers[_cfg.layers.length - 1].color
-        const tr = parseInt(topColor.slice(1,3),16), tg = parseInt(topColor.slice(3,5),16), tb2 = parseInt(topColor.slice(5,7),16)
-        img.scan(0, 0, 900, 280, function(x, y, idx) {
-            if (this.bitmap.data[idx+3] > 10) {
-                this.bitmap.data[idx] = tr; this.bitmap.data[idx+1] = tg; this.bitmap.data[idx+2] = tb2
-            }
-        })
-        const _buf2 = await img.getBufferAsync(Jimp.MIME_JPEG)
-        await X.sendMessage(m.chat, { image: _buf2, caption: _caption }, { quoted: m })
-    } catch(e2) {
-        reply(`❌ Text maker error: ${e.message}`)
-    }
+    try { _fs.unlinkSync(_outFile) } catch {}
+    reply(`❌ *Text maker failed:* ${e.message}`)
 }
 } break
 
