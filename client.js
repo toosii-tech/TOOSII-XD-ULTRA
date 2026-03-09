@@ -5991,234 +5991,104 @@ case 'fire': {
 let tmText = text || (m.quoted && (m.quoted.text || m.quoted.caption || m.quoted.body || '').trim()) || ''
 if (!tmText) return reply(`Example: ${prefix}${command} Your Text Here\n_Or reply to a message containing the text_`)
 
-// ── Per-style ImageMagick render config ──────────────────────────────────────
-// Each style: bg (background hex), layers (array of {offset, color} for depth),
-// font (ImageMagick font name), blur (optional post-blur), extra (raw IM args string)
-const _tmConfigs = {
-    metallic: {
-        bg: '#12121e', font: 'DejaVu-Sans-Bold',
-        layers: [
-            { ox: 6, oy: 6, color: '#222233' },
-            { ox: 4, oy: 4, color: '#444455' },
-            { ox: 2, oy: 2, color: '#888899' },
-            { ox: 1, oy: 1, color: '#bbbbcc' },
-            { ox: 0, oy: 0, color: '#e8e8f8' }
-        ]
-    },
-    ice: {
-        bg: '#030818', font: 'DejaVu-Sans-Bold',
-        layers: [
-            { ox: 6, oy: 6, color: '#001133' },
-            { ox: 4, oy: 4, color: '#003366' },
-            { ox: 2, oy: 2, color: '#0055aa' },
-            { ox: 1, oy: 1, color: '#44aadd' },
-            { ox: 0, oy: 0, color: '#aaeeff' }
-        ]
-    },
-    snow: {
-        bg: '#c8d8f0', font: 'DejaVu-Sans-Bold',
-        layers: [
-            { ox: 5, oy: 5, color: '#8899bb' },
-            { ox: 3, oy: 3, color: '#aabbdd' },
-            { ox: 1, oy: 1, color: '#ccddf0' },
-            { ox: 0, oy: 0, color: '#ffffff' }
-        ]
-    },
-    impressive: {
-        bg: '#0d0800', font: 'DejaVu-Sans-Bold',
-        layers: [
-            { ox: 7, oy: 7, color: '#3d2000' },
-            { ox: 5, oy: 5, color: '#7a4000' },
-            { ox: 3, oy: 3, color: '#cc8800' },
-            { ox: 1, oy: 1, color: '#ffcc00' },
-            { ox: 0, oy: 0, color: '#fff0aa' }
-        ]
-    },
-    matrix: {
-        bg: '#000800', font: 'DejaVu-Sans-Mono-Bold',
-        layers: [
-            { ox: 5, oy: 5, color: '#001400' },
-            { ox: 3, oy: 3, color: '#004400' },
-            { ox: 1, oy: 1, color: '#00aa00' },
-            { ox: 0, oy: 0, color: '#00ff41' }
-        ]
-    },
-    light: {
-        bg: '#000010', font: 'DejaVu-Sans-Bold',
-        layers: [
-            { ox: -6, oy: -6, color: '#444400' },
-            { ox: -4, oy: -4, color: '#888800' },
-            { ox: -2, oy: -2, color: '#cccc00' },
-            { ox: 6, oy: 6, color: '#444400' },
-            { ox: 4, oy: 4, color: '#888800' },
-            { ox: 2, oy: 2, color: '#cccc00' },
-            { ox: 0, oy: 0, color: '#ffffcc' }
-        ], blur: '0x2'
-    },
-    neon: {
-        bg: '#05001a', font: 'DejaVu-Sans-Bold',
-        layers: [
-            { ox: 6, oy: 0, color: '#aa0088' },
-            { ox: -6, oy: 0, color: '#aa0088' },
-            { ox: 0, oy: 6, color: '#aa0088' },
-            { ox: 0, oy: -6, color: '#aa0088' },
-            { ox: 4, oy: 4, color: '#cc00cc' },
-            { ox: -4, oy: -4, color: '#cc00cc' },
-            { ox: 0, oy: 0, color: '#ff88ff' }
-        ], blur: '0x1'
-    },
-    devil: {
-        bg: '#100000', font: 'DejaVu-Sans-Bold',
-        layers: [
-            { ox: 7, oy: 7, color: '#330000' },
-            { ox: 5, oy: 5, color: '#660000' },
-            { ox: 3, oy: 3, color: '#aa0000' },
-            { ox: 1, oy: 1, color: '#dd2200' },
-            { ox: 0, oy: 0, color: '#ff5533' }
-        ]
-    },
-    purple: {
-        bg: '#080010', font: 'DejaVu-Sans-Bold',
-        layers: [
-            { ox: 6, oy: 6, color: '#110033' },
-            { ox: 4, oy: 4, color: '#330066' },
-            { ox: 2, oy: 2, color: '#6600cc' },
-            { ox: 1, oy: 1, color: '#9933ff' },
-            { ox: 0, oy: 0, color: '#cc99ff' }
-        ]
-    },
-    thunder: {
-        bg: '#050510', font: 'DejaVu-Sans-Bold',
-        layers: [
-            { ox: 6, oy: 6, color: '#222200' },
-            { ox: 4, oy: 4, color: '#666600' },
-            { ox: 2, oy: 2, color: '#aaaa00' },
-            { ox: 1, oy: 1, color: '#ffff00' },
-            { ox: 0, oy: 0, color: '#ffffaa' }
-        ], blur: '0x1'
-    },
-    leaves: {
-        bg: '#001500', font: 'DejaVu-Sans-Bold',
-        layers: [
-            { ox: 6, oy: 6, color: '#001a00' },
-            { ox: 4, oy: 4, color: '#003300' },
-            { ox: 2, oy: 2, color: '#116600' },
-            { ox: 1, oy: 1, color: '#33aa00' },
-            { ox: 0, oy: 0, color: '#88ee44' }
-        ]
-    },
-    '1917': {
-        bg: '#1a1008', font: 'Bitstream-Charter-Bold',
-        layers: [
-            { ox: 5, oy: 5, color: '#2a1a08' },
-            { ox: 3, oy: 3, color: '#6b4420' },
-            { ox: 1, oy: 1, color: '#aa7744' },
-            { ox: 0, oy: 0, color: '#d4a96a' }
-        ]
-    },
-    arena: {
-        bg: '#100800', font: 'DejaVu-Sans-Bold',
-        layers: [
-            { ox: 7, oy: 7, color: '#2a1000' },
-            { ox: 5, oy: 5, color: '#6a2800' },
-            { ox: 3, oy: 3, color: '#cc5500' },
-            { ox: 1, oy: 1, color: '#ff8800' },
-            { ox: 0, oy: 0, color: '#ffcc88' }
-        ]
-    },
-    hacker: {
-        bg: '#000300', font: 'DejaVu-Sans-Mono-Bold',
-        layers: [
-            { ox: 3, oy: 3, color: '#002200' },
-            { ox: 1, oy: 1, color: '#006600' },
-            { ox: 0, oy: 0, color: '#00ff00' }
-        ]
-    },
-    sand: {
-        bg: '#1a1005', font: 'Bitstream-Charter-Bold',
-        layers: [
-            { ox: 6, oy: 6, color: '#3a2a10' },
-            { ox: 4, oy: 4, color: '#7a5a28' },
-            { ox: 2, oy: 2, color: '#c09050' },
-            { ox: 1, oy: 1, color: '#d4aa70' },
-            { ox: 0, oy: 0, color: '#eedd99' }
-        ]
-    },
-    blackpink: {
-        bg: '#0a000a', font: 'DejaVu-Sans-Bold',
-        layers: [
-            { ox: 6, oy: 6, color: '#330033' },
-            { ox: 4, oy: 4, color: '#880044' },
-            { ox: 2, oy: 2, color: '#cc0066' },
-            { ox: 1, oy: 1, color: '#ff44aa' },
-            { ox: 0, oy: 0, color: '#ffbbdd' }
-        ]
-    },
-    glitch: {
-        bg: '#000010', font: 'DejaVu-Sans-Mono-Bold',
-        layers: [
-            { ox: -5, oy: 0, color: '#ff0000' },
-            { ox: 5, oy: 0, color: '#00ffff' },
-            { ox: 0, oy: 0, color: '#ffffff' }
-        ]
-    },
-    fire: {
-        bg: '#0d0200', font: 'DejaVu-Sans-Bold',
-        layers: [
-            { ox: 7, oy: 7, color: '#330000' },
-            { ox: 5, oy: 5, color: '#881100' },
-            { ox: 3, oy: 3, color: '#cc4400' },
-            { ox: 2, oy: 2, color: '#ff6600' },
-            { ox: 1, oy: 1, color: '#ffaa00' },
-            { ox: 0, oy: 0, color: '#ffee88' }
-        ]
-    }
-}
-
-const _cfg = _tmConfigs[command] || _tmConfigs.neon
 const _label = command.charAt(0).toUpperCase() + command.slice(1)
 const _caption = `*${_label} Text:* ${tmText}`
 
-const { execSync: _execSync } = require('child_process')
+// ── Style configs: bg RGB, font (sans/mono/serif), layers [{ox,oy,r,g,b}], blur ──
+const _tmStyles = {
+    metallic: { bg:[18,18,30],  font:'sans',  layers:[[6,6,34,34,51],[4,4,68,68,85],[2,2,136,136,153],[1,1,187,187,204],[0,0,232,232,248]] },
+    ice:      { bg:[3,8,24],    font:'sans',  layers:[[6,6,0,17,51],[4,4,0,51,102],[2,2,0,85,170],[1,1,68,170,221],[0,0,170,238,255]] },
+    snow:     { bg:[200,216,240],font:'sans', layers:[[5,5,136,153,187],[3,3,170,187,221],[1,1,204,221,240],[0,0,255,255,255]] },
+    impressive:{ bg:[13,8,0],   font:'sans',  layers:[[7,7,61,32,0],[5,5,122,64,0],[3,3,204,136,0],[1,1,255,204,0],[0,0,255,240,170]] },
+    matrix:   { bg:[0,8,0],     font:'mono',  layers:[[5,5,0,20,0],[3,3,0,68,0],[1,1,0,170,0],[0,0,0,255,65]] },
+    light:    { bg:[0,0,16],    font:'sans',  layers:[[-6,-6,68,68,0],[-4,-4,136,136,0],[-2,-2,204,204,0],[6,6,68,68,0],[4,4,136,136,0],[2,2,204,204,0],[0,0,255,255,204]], blur:1 },
+    neon:     { bg:[5,0,26],    font:'sans',  layers:[[6,0,170,0,136],[-6,0,170,0,136],[0,6,170,0,136],[0,-6,170,0,136],[4,4,204,0,204],[-4,-4,204,0,204],[0,0,255,136,255]], blur:1 },
+    devil:    { bg:[16,0,0],    font:'sans',  layers:[[7,7,51,0,0],[5,5,102,0,0],[3,3,170,0,0],[1,1,221,34,0],[0,0,255,85,51]] },
+    purple:   { bg:[8,0,16],    font:'sans',  layers:[[6,6,17,0,51],[4,4,51,0,102],[2,2,102,0,204],[1,1,153,51,255],[0,0,204,153,255]] },
+    thunder:  { bg:[5,5,16],    font:'sans',  layers:[[6,6,34,34,0],[4,4,102,102,0],[2,2,170,170,0],[1,1,255,255,0],[0,0,255,255,170]], blur:1 },
+    leaves:   { bg:[0,21,0],    font:'sans',  layers:[[6,6,0,26,0],[4,4,0,51,0],[2,2,17,102,0],[1,1,51,170,0],[0,0,136,238,68]] },
+    '1917':   { bg:[26,16,8],   font:'serif', layers:[[5,5,42,26,8],[3,3,107,68,32],[1,1,170,119,68],[0,0,212,169,106]] },
+    arena:    { bg:[16,8,0],    font:'sans',  layers:[[7,7,42,16,0],[5,5,106,40,0],[3,3,204,85,0],[1,1,255,136,0],[0,0,255,204,136]] },
+    hacker:   { bg:[0,3,0],     font:'mono',  layers:[[3,3,0,34,0],[1,1,0,102,0],[0,0,0,255,0]] },
+    sand:     { bg:[26,16,5],   font:'serif', layers:[[6,6,58,42,16],[4,4,122,90,40],[2,2,192,144,80],[1,1,212,170,112],[0,0,238,221,153]] },
+    blackpink:{ bg:[10,0,10],   font:'sans',  layers:[[6,6,51,0,51],[4,4,136,0,68],[2,2,204,0,102],[1,1,255,68,170],[0,0,255,187,221]] },
+    glitch:   { bg:[0,0,16],    font:'mono',  layers:[[-5,0,255,0,0],[5,0,0,255,255],[0,0,255,255,255]] },
+    fire:     { bg:[13,2,0],    font:'sans',  layers:[[7,7,51,0,0],[5,5,136,17,0],[3,3,204,68,0],[2,2,255,102,0],[1,1,255,170,0],[0,0,255,238,136]] },
+}
+
+const _sty = _tmStyles[command] || _tmStyles.fire
 const _fs = require('fs')
 const _path = require('path')
 const _os = require('os')
-
-// Dynamic pointsize — scales down for longer text so it always fits
-const _tlen = tmText.length
-const _pt = _tlen <= 6 ? 160 : _tlen <= 10 ? 130 : _tlen <= 15 ? 105 : _tlen <= 22 ? 80 : _tlen <= 32 ? 60 : 45
-
-// Sanitize text for shell — strip/replace problematic chars
-const _safe = tmText
-    .replace(/\\/g, '')
-    .replace(/"/g, "'")
-    .replace(/`/g, "'")
-    .replace(/\$/g, 'S')
-    .replace(/\n/g, ' ')
-    .trim()
-
-// Build layer args — flat join with spaces only (NO \n — breaks exec)
-const _layerArgs = _cfg.layers.map(l => {
-    const ox = (l.ox >= 0 ? '+' : '') + l.ox
-    const oy = (l.oy >= 0 ? '+' : '') + l.oy
-    return `-fill "${l.color}" -annotate ${ox}${oy} "${_safe}"`
-}).join(' ')
-
-const _blurArg = _cfg.blur ? `-blur ${_cfg.blur}` : ''
 const _outFile = _path.join(_os.tmpdir(), `tm_${Date.now()}.jpg`)
 
-// Single clean command — no shell continuation chars
-const _cmd = `convert -size 1024x400 xc:"${_cfg.bg}" -font ${_cfg.font} -pointsize ${_pt} -gravity Center ${_layerArgs}${_blurArg ? ' ' + _blurArg : ''} -quality 92 "${_outFile}"`
+// Build a self-contained Python script — no PATH issues, Pillow works everywhere
+const _safeText = tmText.replace(/\\/g, '').replace(/'/g, "\\'").replace(/\n/g, ' ').trim().slice(0, 80)
+const _layersJson = JSON.stringify(_sty.layers)
+const _bgJson = JSON.stringify(_sty.bg)
+const _fontType = _sty.font
+const _blur = _sty.blur || 0
+
+const _pyScript = `
+import sys, json, os
+from PIL import Image, ImageDraw, ImageFont, ImageFilter
+
+W, H = 1024, 400
+text = '${_safeText}'
+font_type = '${_fontType}'
+bg = tuple(${_bgJson})
+layers = ${_layersJson}
+blur = ${_blur}
+out = '${_outFile.replace(/\\/g, '/')}'
+
+FONTS = {
+    'sans':  '/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf',
+    'mono':  '/usr/share/fonts/truetype/dejavu/DejaVuSansMono-Bold.ttf',
+    'serif': '/usr/share/fonts/truetype/dejavu/DejaVuSerif-Bold.ttf',
+}
+font_path = FONTS.get(font_type, FONTS['sans'])
+if not os.path.exists(font_path):
+    # fallback font search
+    import glob
+    found = glob.glob('/usr/share/fonts/**/*Bold*.ttf', recursive=True)
+    font_path = found[0] if found else None
+
+n = len(text)
+pt = 160 if n<=6 else 130 if n<=10 else 105 if n<=15 else 80 if n<=22 else 60 if n<=32 else 45
+
+font = ImageFont.truetype(font_path, pt) if font_path else ImageFont.load_default()
+
+img = Image.new('RGB', (W, H), bg)
+draw = ImageDraw.Draw(img)
+bbox = draw.textbbox((0, 0), text, font=font)
+tw, th = bbox[2]-bbox[0], bbox[3]-bbox[1]
+x, y = (W-tw)//2, (H-th)//2
+
+for layer in layers:
+    ox, oy, r, g, b = layer
+    draw.text((x+ox, y+oy), text, font=font, fill=(r, g, b))
+
+if blur:
+    img = img.filter(ImageFilter.GaussianBlur(radius=blur))
+
+img.save(out, 'JPEG', quality=92)
+print('OK')
+`
+
+const _pyFile = _path.join(_os.tmpdir(), `tm_${Date.now()}_gen.py`)
+_fs.writeFileSync(_pyFile, _pyScript)
 
 try {
-    _execSync(_cmd, { timeout: 15000 })
+    const { execSync: _exec } = require('child_process')
+    _exec(`python3 "${_pyFile}"`, { timeout: 20000 })
     const _buf = _fs.readFileSync(_outFile)
-    try { _fs.unlinkSync(_outFile) } catch {}
-    if (!_buf || _buf.length < 2000) throw new Error('Empty render')
+    try { _fs.unlinkSync(_pyFile); _fs.unlinkSync(_outFile) } catch {}
+    if (!_buf || _buf.length < 2000) throw new Error('Empty render output')
     await X.sendMessage(m.chat, { image: _buf, caption: _caption }, { quoted: m })
 } catch(e) {
+    try { _fs.unlinkSync(_pyFile) } catch {}
     try { _fs.unlinkSync(_outFile) } catch {}
-    reply(`❌ *Text maker failed:* ${e.message}`)
+    reply(`❌ *Text maker failed:* ${e.message.split('\n')[0]}`)
 }
 } break
 
