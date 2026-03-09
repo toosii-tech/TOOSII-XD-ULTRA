@@ -1579,6 +1579,38 @@ return reply(`Send an Image/Video with caption ${prefix + command}\nVideo durati
 }
 break
 //━━━━━━━━━━━━━━━━━━━━━━━━//
+// Take / Steal Sticker
+case 'take':
+case 'steal': {
+    if (!quoted) return reply(`Reply to a *sticker* with *${prefix + command}* to re-send it with your pack info.\n\nUsage: *${prefix + command} [packname|author]*\nExample: *${prefix}take MyPack|MyName*`)
+    if (mime !== 'image/webp') return reply(`Reply to a *sticker* to use *${prefix + command}*`)
+
+    let _tkPack = global.packname || 'XD Ultra'
+    let _tkAuth = global.author || 'Bot'
+
+    if (text) {
+        const _split = text.split('|')
+        if (_split.length >= 2) {
+            _tkPack = _split[0].trim()
+            _tkAuth = _split[1].trim()
+        } else {
+            _tkPack = text.trim()
+        }
+    }
+
+    try {
+        const _tkMedia = await quoted.download()
+        await X.sendImageAsStickerAV(m.chat, _tkMedia, m, {
+            packname: _tkPack,
+            author: _tkAuth
+        })
+    } catch (e) {
+        console.error('Take sticker error:', e)
+        reply('Failed to steal sticker: ' + (e.message || 'Unknown error'))
+    }
+}
+break
+//━━━━━━━━━━━━━━━━━━━━━━━━//
 // View Once Opener
 case 'vv': {
 if (!m.quoted) return reply(`Reply to a *view once* image or video with *${prefix}vv* to open it`)
