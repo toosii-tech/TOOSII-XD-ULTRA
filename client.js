@@ -5939,28 +5939,73 @@ case 'sand':
 case 'blackpink':
 case 'glitch':
 case 'fire': {
-// Resolve text from typed args OR quoted message body/caption
 let tmText = text || (m.quoted && (m.quoted.text || m.quoted.caption || m.quoted.body || '').trim()) || ''
 if (!tmText) return reply(`Example: ${prefix}${command} Your Text Here\n_Or reply to a message containing the text_`)
-// styleMap defined outside try so fallback catch can also access it
-let styleMap = { metallic: 'metallic chrome 3D text effect', ice: 'frozen ice crystal 3D text effect', snow: 'snowy winter 3D text effect', impressive: 'impressive golden 3D text', matrix: 'green matrix digital code text', light: 'glowing light beam text effect', neon: 'neon glowing sign text on dark background', devil: 'dark red devil fire text effect', purple: 'purple galaxy cosmic text effect', thunder: 'electric lightning thunder text effect', leaves: 'green leaves nature botanical text', '1917': 'vintage sepia war 1917 style text', arena: 'battle arena warrior epic text', hacker: 'green on black hacker terminal text', sand: 'sandy desert dune text effect', blackpink: 'blackpink kpop pink glam style text', glitch: 'digital glitch corrupted text effect', fire: 'burning fire flame text effect' }
+
+const _tmStyleMap = { metallic: 'metallic chrome 3D text effect', ice: 'frozen ice crystal 3D text effect', snow: 'snowy winter 3D text effect', impressive: 'impressive golden 3D text', matrix: 'green matrix digital code text', light: 'glowing light beam text effect', neon: 'neon glowing sign text on dark background', devil: 'dark red devil fire text effect', purple: 'purple galaxy cosmic text effect', thunder: 'electric lightning thunder text effect', leaves: 'green leaves nature botanical text', '1917': 'vintage sepia war 1917 style text', arena: 'battle arena warrior epic text', hacker: 'green on black hacker terminal text', sand: 'sandy desert dune text effect', blackpink: 'blackpink kpop pink glam style text', glitch: 'digital glitch corrupted text effect', fire: 'burning fire flame text effect' }
+const _tmStyle = _tmStyleMap[command] || command + ' style text'
+const _tmPrompt = `3D stylized text that says "${tmText}", ${_tmStyle}, centered composition, high quality render, typography art`
+const _tmCaption = `*${command.charAt(0).toUpperCase() + command.slice(1)} Text:* ${tmText}`
+const _tmSeed = Math.floor(Math.random() * 999999)
+
+// Helper: try to download a URL as a buffer, return null on any failure
+const _tmFetch = async (url) => {
+    try {
+        const _r = await axios.get(url, { responseType: 'arraybuffer', timeout: 25000, headers: { 'User-Agent': 'Mozilla/5.0' } })
+        const _b = Buffer.from(_r.data)
+        return _b.length > 5000 ? _b : null
+    } catch { return null }
+}
+
+// 4 completely different providers — tries each in order until one works
+const _tmProviders = [
+    // 1. Pollinations flux model (best quality)
+    () => `https://image.pollinations.ai/prompt/${encodeURIComponent(_tmPrompt)}?model=flux&width=1024&height=512&seed=${_tmSeed}&nologo=true`,
+    // 2. Pollinations default model with different seed (different server path)
+    () => `https://image.pollinations.ai/prompt/${encodeURIComponent(_tmPrompt)}?width=1024&height=512&seed=${_tmSeed + 1}&nologo=true&model=turbo`,
+    // 3. Lexica aperture (no rate limit, no key needed)
+    async () => {
+        const _res = await axios.get(`https://lexica.art/api/v1/search?q=${encodeURIComponent(_tmPrompt)}`, { timeout: 10000 })
+        const _imgs = _res?.data?.images
+        if (_imgs && _imgs.length > 0) return _imgs[Math.floor(Math.random() * Math.min(5, _imgs.length))].src
+        return null
+    },
+    // 4. Picsum + text overlay as last resort (always works)
+    () => `https://via.placeholder.com/1024x512/1a1a2e/ffffff?text=${encodeURIComponent(tmText.slice(0, 30))}`
+]
+
 try {
-let style = styleMap[command] || command + ' style text'
-let prompt = `3D stylized text that says "${tmText}", ${style}, centered composition, no background clutter, high quality render, typography art`
-let seed = Math.floor(Math.random() * 99999)
-let imgUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=1024&height=512&nologo=true&seed=${seed}`
-let caption = `*${command.charAt(0).toUpperCase() + command.slice(1)} Text:* ${tmText}`
-// Download to buffer so image sends correctly in any chat (group, DM, or bot number)
-let imgBuffer = await getBuffer(imgUrl)
-if (!imgBuffer || imgBuffer.length < 3000) throw new Error('Image generation failed, try again')
-await X.sendMessage(m.chat, { image: imgBuffer, caption }, { quoted: m })
+    await reply('🎨 _Generating image..._')
+    let _tmBuffer = null
+    let _providerUsed = -1
+
+    for (let _pi = 0; _pi < _tmProviders.length; _pi++) {
+        try {
+            const _urlOrFn = _tmProviders[_pi]
+            let _url = typeof _urlOrFn === 'function' ? await _urlOrFn() : _urlOrFn
+            if (!_url) continue
+            if (typeof _url === 'string' && _url.startsWith('http')) {
+                _tmBuffer = await _tmFetch(_url)
+            }
+            if (_tmBuffer && _tmBuffer.length > 5000) {
+                _providerUsed = _pi
+                break
+            }
+        } catch { continue }
+    }
+
+    if (!_tmBuffer || _tmBuffer.length < 5000) {
+        // Last resort: send placeholder URL directly — always visible
+        await X.sendMessage(m.chat, {
+            image: { url: `https://via.placeholder.com/1024x512/1a1a2e/00d4ff?text=${encodeURIComponent(tmText.slice(0, 40))}` },
+            caption: _tmCaption + '\n\n_⚠️ All image servers busy — using placeholder_'
+        }, { quoted: m })
+    } else {
+        await X.sendMessage(m.chat, { image: _tmBuffer, caption: _tmCaption }, { quoted: m })
+    }
 } catch(e) {
-// Fallback: send via URL if buffer download failed
-try {
-    let p2 = `3D stylized text "${tmText}", ${styleMap[command] || command + ' style'}, high quality`
-    let fallbackUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(p2)}?width=1024&height=512&nologo=true&seed=${Math.floor(Math.random()*99999)}`
-    await X.sendMessage(m.chat, { image: { url: fallbackUrl }, caption: `*${command.charAt(0).toUpperCase() + command.slice(1)} Text:* ${tmText}` }, { quoted: m })
-} catch(e2) { reply('❌ Error: ' + (e2.message || e.message)) }
+    // Absolute fallback — plain text response so user knows what happened
+    reply(`⏳ *Image servers are busy right now.*\n\nTry again in a few seconds.\n\n_Style:_ ${_tmStyle}\n_Text:_ ${tmText}`)
 }
 } break
 
