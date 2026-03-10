@@ -1617,13 +1617,52 @@ case 'steal': {
 
     try {
         const _tkMedia = await quoted.download()
-        await X.sendImageAsStickerAV(m.chat, _tkMedia, m, {
-            packname: _tkPack,
-            author: _tkAuth
-        })
+
+        // Detect animated WebP by ANIM chunk presence (bytes 12-16)
+        const _isAnimated = _tkMedia && _tkMedia.length > 16 && _tkMedia.toString('ascii', 12, 16) === 'ANIM'
+
+        if (_isAnimated) {
+            // Animated sticker — route through video pipeline
+            await X.sendVideoAsStickerAV(m.chat, _tkMedia, m, {
+                packname: _tkPack,
+                author: _tkAuth
+            })
+        } else {
+            // Static WebP sticker — inject EXIF metadata directly, skip ffmpeg entirely
+            const _webp    = require('node-webpmux')
+            const _Crypto  = require('crypto')
+            const _os      = require('os')
+            const _fs      = require('fs')
+            const _path    = require('path')
+
+            const _tmpIn  = _path.join(_os.tmpdir(), `tk_${_Crypto.randomBytes(4).toString('hex')}.webp`)
+            const _tmpOut = _path.join(_os.tmpdir(), `tk_${_Crypto.randomBytes(4).toString('hex')}.webp`)
+            _fs.writeFileSync(_tmpIn, _tkMedia)
+
+            const _img = new _webp.Image()
+            const _json = {
+                'sticker-pack-id': 'TOOSII-XD-ULTRA',
+                'sticker-pack-name': _tkPack,
+                'sticker-pack-publisher': _tkAuth,
+                'emojis': ['']
+            }
+            const _exifAttr = Buffer.from([0x49,0x49,0x2A,0x00,0x08,0x00,0x00,0x00,0x01,0x00,0x41,0x57,0x07,0x00,0x00,0x00,0x00,0x00,0x16,0x00,0x00,0x00])
+            const _jsonBuf  = Buffer.from(JSON.stringify(_json), 'utf-8')
+            const _exif     = Buffer.concat([_exifAttr, _jsonBuf])
+            _exif.writeUIntLE(_jsonBuf.length, 14, 4)
+            await _img.load(_tmpIn)
+            _img.exif = _exif
+            await _img.save(_tmpOut)
+
+            const _finalBuf = _fs.readFileSync(_tmpOut)
+            try { _fs.unlinkSync(_tmpIn) } catch {}
+            try { _fs.unlinkSync(_tmpOut) } catch {}
+
+            await X.sendMessage(m.chat, { sticker: _finalBuf }, { quoted: m })
+        }
     } catch (e) {
-        console.error('Take sticker error:', e)
-        reply('Failed to steal sticker: ' + (e.message || 'Unknown error'))
+        console.error('Take sticker error:', e.message)
+        reply('❌ Failed to steal sticker: ' + (e.message || 'Unknown error'))
     }
 }
 break
