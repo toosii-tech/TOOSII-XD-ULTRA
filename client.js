@@ -751,6 +751,7 @@ switch(command) {
 //━━━━━━━━━━━━━━━━━━━━━━━━//
 // help command
 case 'help': {
+    await X.sendMessage(m.chat, { react: { text: '📋', key: m.key } })
 const helpText = `┏━━━━━━━━━━━━━━━━━━━━━━━━┓
 ┃  *ᴛᴏᴏꜱɪɪ-xᴅ ᴜʟᴛʀᴀ*
 ┃  _Qᴜɪᴄᴋ ʜᴇʟᴘ ɢᴜɪᴅᴇ_
@@ -791,6 +792,7 @@ break
 
 // system menu
 case 'menu': {
+    await X.sendMessage(m.chat, { react: { text: '📋', key: m.key } })
 // menu list - clear cache to always load fresh
 const menuFiles = ['aimenu','toolsmenu','groupmenu','ownermenu','searchmenu','gamemenu','stickermenu','othermenu','downloadermenu','textmakermenu'];
 menuFiles.forEach(f => { try { delete require.cache[require.resolve('./library/menulist/' + f)]; } catch {} });
@@ -899,6 +901,7 @@ break;
 // Download Features
 case 'mfdl':
 case 'mediafire': {
+    await X.sendMessage(m.chat, { react: { text: '📥', key: m.key } })
  if (!text) return reply('Please provide a MediaFire link')
   try {
     const api = await fetchJson(`https://api.vreden.web.id/api/mediafiredl?url=${encodeURIComponent(text)}`)
@@ -929,6 +932,7 @@ case 'mediafire': {
 break
 case 'ig':
 case 'instagram': {
+    await X.sendMessage(m.chat, { react: { text: '📸', key: m.key } })
     if (!text) return reply("Please provide the Instagram link");
     try {
         const mediaUrl = await igdl(text);
@@ -955,6 +959,7 @@ break
 
 case 'tt': 
 case 'tiktok': {
+    await X.sendMessage(m.chat, { react: { text: '🎵', key: m.key } })
 if (!text) return reply(`Example: ${prefix + command} <tiktok link>`)
 try {
     let data = await fg.tiktok(text)
@@ -1020,6 +1025,7 @@ case 'play':
 case 'song':
 case 'music':
 case 'ytplay': {
+    await X.sendMessage(m.chat, { react: { text: '🎵', key: m.key } })
     if (!text) return reply('What song do you want to search for?\n\nExample: .play Juice WRLD Lucid Dreams')
     try {
         let search = await yts(text);
@@ -1426,12 +1432,14 @@ X.relayMessage(m.chat, contact.message, { messageId: contact.key.id })
 break
 
 case 'sc': {
+    await X.sendMessage(m.chat, { react: { text: '📜', key: m.key } })
 reply(`╭━━━〔 🤖 *${global.botname}* 〕━━━╮\n│\n│ 📞 wa.me/254748340864\n│ 📲 t.me/toosiitech\n│\n╰━━━━━━━━━━━━━━━━━╯`)
 }
 break
 
 case 'infobot':
 case 'botinfo': {
+    await X.sendMessage(m.chat, { react: { text: '🤖', key: m.key } })
   const botInfo = `╭━━━〔 🤖 *BOT INFO* 〕━━━╮
 │
 │ 📛 Name: *${botname}*
@@ -1457,6 +1465,7 @@ break
 case 'bratvid':
 case 'bratv':
 case 'bratvideo': {
+    await X.sendMessage(m.chat, { react: { text: '✏️', key: m.key } })
   if (!text) return reply(`Example: ${prefix + command} hai bang`)
   if (text.length > 250) return reply(`Character limit exceeded, max 250!`)
   const words = text.split(" ")
@@ -1513,6 +1522,7 @@ case 'bratvideo': {
 break
 
 case 'brat': {
+    await X.sendMessage(m.chat, { react: { text: '✏️', key: m.key } })
 if (!q) return reply(`Please enter text\n\nExample: ${prefix + command} alok hamil`);
 let rulz = `https://aqul-brat.hf.space/api/brat?text=${encodeURIComponent(q)}`;
 try {
@@ -1527,6 +1537,7 @@ await reply(`API is currently down or under maintenance. Please try again later.
 break
 
 case 'emojimix': {
+    await X.sendMessage(m.chat, { react: { text: '😎', key: m.key } })
     if (!text) return reply(`Enter two emojis to mix\n\nExample: ${prefix + command} [emoji1]+[emoji2]`);
 
     const emojis = text.split(/[\+\|]/);
@@ -1539,6 +1550,7 @@ case 'emojimix': {
 }
 break;
 case 'qc': {
+    await X.sendMessage(m.chat, { react: { text: '💬', key: m.key } })
     let text;
 
     if (args.length >= 1) {
@@ -1561,6 +1573,7 @@ break
 case 'sticker':
 case 'stiker':
 case 's':{
+    await X.sendMessage(m.chat, { react: { text: '🖼️', key: m.key } })
 if (!quoted) return reply(`Reply to Video/Image with caption ${prefix + command}`)
 if (/image/.test(mime)) {
 let media = await quoted.download()
@@ -1584,6 +1597,7 @@ break
 // Take / Steal Sticker
 case 'take':
 case 'steal': {
+    await X.sendMessage(m.chat, { react: { text: '🎨', key: m.key } })
     if (!quoted) return reply(`Reply to a *sticker* with *${prefix + command}* to re-send it with your pack info.\n\nUsage: *${prefix + command} [packname|author]*\nExample: *${prefix}take MyPack|MyName*`)
     if (mime !== 'image/webp') return reply(`Reply to a *sticker* to use *${prefix + command}*`)
 
@@ -1615,6 +1629,7 @@ break
 //━━━━━━━━━━━━━━━━━━━━━━━━//
 // View Once Opener
 case 'vv': {
+    await X.sendMessage(m.chat, { react: { text: '👁️', key: m.key } })
 if (!m.quoted) return reply(`Reply to a *view once* image or video with *${prefix}vv* to open it`)
 let quotedMsg = m.quoted
 let quotedType = quotedMsg.mtype || ''
@@ -1674,6 +1689,7 @@ break
 case 'fakerecording':
 case 'fakerecord':
 case 'frecord': {
+    await X.sendMessage(m.chat, { react: { text: '🎙️', key: m.key } })
 if (!isOwner) return reply(mess.OnlyOwner)
 if (global.fakePresence === 'recording') {
     global.fakePresence = 'off'
@@ -1688,6 +1704,7 @@ break
 case 'faketyping':
 case 'faketype':
 case 'ftype': {
+    await X.sendMessage(m.chat, { react: { text: '⌨️', key: m.key } })
 if (!isOwner) return reply(mess.OnlyOwner)
 if (global.fakePresence === 'typing') {
     global.fakePresence = 'off'
@@ -1701,6 +1718,7 @@ break
 
 case 'fakeonline':
 case 'fonline': {
+    await X.sendMessage(m.chat, { react: { text: '🟢', key: m.key } })
 if (!isOwner) return reply(mess.OnlyOwner)
 if (global.fakePresence === 'online') {
     global.fakePresence = 'off'
@@ -1714,6 +1732,7 @@ break
 
 case 'fakestatus':
 case 'fpresence': {
+    await X.sendMessage(m.chat, { react: { text: '👻', key: m.key } })
 if (!isOwner) return reply(mess.OnlyOwner)
 let current = global.fakePresence || 'off'
 reply(`*Fake Presence Status*\nCurrent mode: *${current}*\n\nAvailable commands:\n• ${prefix}faketyping - Toggle auto typing\n• ${prefix}fakerecord - Toggle auto recording\n• ${prefix}fakeonline - Toggle auto online\n\nUse any command again to turn it off.`)
@@ -1723,6 +1742,7 @@ break
 case 'autoviewstatus':
 case 'autoview':
 case 'avs': {
+    await X.sendMessage(m.chat, { react: { text: '👁️', key: m.key } })
 if (!isOwner) return reply(mess.OnlyOwner)
 let avsArg = (args[0] || '').toLowerCase()
 if (avsArg === 'on' || avsArg === 'enable') {
@@ -1746,6 +1766,7 @@ break
 case 'autolikestatus':
 case 'autolike':
 case 'als': {
+    await X.sendMessage(m.chat, { react: { text: '❤️', key: m.key } })
 if (!isOwner) return reply(mess.OnlyOwner)
 let emojiArg = (args.join(' ') || '').trim()
 if (!emojiArg) {
@@ -1768,6 +1789,7 @@ break
 
 case 'statusconfig':
 case 'autostatus': {
+    await X.sendMessage(m.chat, { react: { text: '⚙️', key: m.key } })
 if (!isOwner) return reply(mess.OnlyOwner)
 let viewState = global.autoViewStatus ? '✅ ON' : '❌ OFF'
 let likeState = (global.autoLikeStatus && global.autoLikeEmoji) ? `✅ ON (${global.autoLikeEmoji})` : '❌ OFF'
@@ -1801,6 +1823,7 @@ break
 case 'togroupstatus':
 case 'statustogroup':
 case 'fwdstatus': {
+    await X.sendMessage(m.chat, { react: { text: '📢', key: m.key } })
 // ── Two modes ─────────────────────────────────────────────────────────────────
 // 1. Used inside a group with media/text → posts it as a status visible to group members
 // 2. Used with 'on'/'off' arg → enables/disables AUTO-FORWARD of incoming statuses to this group
@@ -1892,6 +1915,7 @@ break
 // Developer tools
 case 'self':
 case 'private': {
+    await X.sendMessage(m.chat, { react: { text: '🔒', key: m.key } })
 if (!isDeployedNumber) return reply(mess.OnlyOwner)
 X.public = false
 reply(`*🔒 Bot Mode: PRIVATE*\n\nOnly the deployed number (*${botClean}*) can use commands.\n\n❌ All other users are now blocked from using any command.`)
@@ -1899,6 +1923,7 @@ reply(`*🔒 Bot Mode: PRIVATE*\n\nOnly the deployed number (*${botClean}*) can 
 break
 
 case 'public': {
+    await X.sendMessage(m.chat, { react: { text: '🔓', key: m.key } })
 if (!isDeployedNumber) return reply(mess.OnlyOwner)
 X.public = true
 reply(`*🌐 Bot Mode: PUBLIC*\n\n✅ All users can now use bot commands.\n\nOwner-only commands are still restricted to the deployed number.`)
@@ -1906,6 +1931,7 @@ reply(`*🌐 Bot Mode: PUBLIC*\n\n✅ All users can now use bot commands.\n\nOwn
 break
 
 case 'join': {
+    await X.sendMessage(m.chat, { react: { text: '🔗', key: m.key } })
 if (!isOwner) return reply(mess.OnlyOwner)
 if (!q) return reply(`*Usage:* ${prefix}join [group invite link]\n\n*Example:*\n${prefix}join https://chat.whatsapp.com/AbCdEfGhIjK`)
 let linkMatch = q.match(/chat\.whatsapp\.com\/([0-9A-Za-z]{20,24})/)
@@ -1929,12 +1955,14 @@ try {
 break
 
 case 'prefix': {
+    await X.sendMessage(m.chat, { react: { text: '⚙️', key: m.key } })
 let currentPfx = global.botPrefix || '.'
 reply(`ᴘʀᴇꜰɪx : *${currentPfx}*`)
 }
 break
 
 case 'save': {
+    await X.sendMessage(m.chat, { react: { text: '💾', key: m.key } })
 if (!m.quoted) return reply(`Reply to a message/media with ${prefix}save to save it to your DM`)
 try {
 let savedMsg = {}
@@ -1962,6 +1990,7 @@ reply('Saved to your DM!')
 break
 
 case 'setprefix': {
+    await X.sendMessage(m.chat, { react: { text: '⚙️', key: m.key } })
 if (!isOwner) return reply(mess.OnlyOwner)
 let newPrefix = (args[0] || '').trim()
 if (!newPrefix) {
@@ -1979,6 +2008,7 @@ break
 
 // Bot Configuration Commands
 case 'botname': {
+    await X.sendMessage(m.chat, { react: { text: '✏️', key: m.key } })
 if (!isOwner) return reply(mess.OnlyOwner)
 let newName = args.join(' ').trim()
 if (!newName) return reply(`*Current Bot Name:* ${global.botname}\n\nUsage: ${prefix}botname [new name]`)
@@ -1989,6 +2019,7 @@ break
 
 case 'setauthor':
 case 'author': {
+    await X.sendMessage(m.chat, { react: { text: '✏️', key: m.key } })
 if (!isOwner) return reply(mess.OnlyOwner)
 let newAuthor = args.join(' ').trim()
 if (!newAuthor) return reply(`*Current Sticker Author:* ${global.author}\n\nUsage: ${prefix}author [name]`)
@@ -1999,6 +2030,7 @@ break
 
 case 'setpackname':
 case 'packname': {
+    await X.sendMessage(m.chat, { react: { text: '✏️', key: m.key } })
 if (!isOwner) return reply(mess.OnlyOwner)
 let newPack = args.join(' ').trim()
 if (!newPack) return reply(`*Current Sticker Pack:* ${global.packname}\n\nUsage: ${prefix}packname [name]`)
@@ -2009,6 +2041,7 @@ break
 
 case 'timezone':
 case 'settz': {
+    await X.sendMessage(m.chat, { react: { text: '🕐', key: m.key } })
 if (!isOwner) return reply(mess.OnlyOwner)
 let tz = args.join(' ').trim()
 if (!tz) return reply(`*Current Timezone:* ${global.botTimezone}\n\nUsage: ${prefix}timezone [timezone]\n\nExamples:\n${prefix}timezone Africa/Nairobi\n${prefix}timezone Asia/Jakarta\n${prefix}timezone America/New_York`)
@@ -2019,6 +2052,7 @@ break
 
 case 'botpic':
 case 'setbotpic': {
+    await X.sendMessage(m.chat, { react: { text: '🖼️', key: m.key } })
 if (!isOwner) return reply(mess.OnlyOwner)
 let picUrl = args.join(' ').trim()
 if (m.quoted && m.quoted.mtype === 'imageMessage') {
@@ -2042,6 +2076,7 @@ break
 
 case 'boturl':
 case 'setboturl': {
+    await X.sendMessage(m.chat, { react: { text: '🔗', key: m.key } })
 if (!isOwner) return reply(mess.OnlyOwner)
 let newUrl = args.join(' ').trim()
 if (!newUrl) return reply(`*Current Bot URL:* ${global.botUrl || global.wagc}\n\nUsage: ${prefix}boturl [url]`)
@@ -2053,6 +2088,7 @@ break
 
 case 'anticall':
 case 'setanticall': {
+    await X.sendMessage(m.chat, { react: { text: '📵', key: m.key } })
 if (!isOwner) return reply(mess.OnlyOwner)
 let acArg = (args[0] || '').toLowerCase()
 if (!acArg) {
@@ -2070,6 +2106,7 @@ break
 
 case 'autoread':
 case 'setautoread': {
+    await X.sendMessage(m.chat, { react: { text: '✅', key: m.key } })
 if (!isOwner) return reply(mess.OnlyOwner)
 let arArg = (args[0] || '').toLowerCase()
 if (!arArg) {
@@ -2087,6 +2124,7 @@ break
 
 case 'chatbot':
 case 'setchatbot': {
+    await X.sendMessage(m.chat, { react: { text: '🤖', key: m.key } })
 // Owner can toggle globally; group admins/members can toggle per-chat via chatboai
 if (!isOwner) return reply(mess.OnlyOwner)
 let cbArg = (args[0] || '').toLowerCase()
@@ -2106,6 +2144,7 @@ break
 
 case 'autobio':
 case 'setautobio': {
+    await X.sendMessage(m.chat, { react: { text: '📝', key: m.key } })
 if (!isOwner) return reply(mess.OnlyOwner)
 let abArg = (args[0] || '').toLowerCase()
 if (!abArg) {
@@ -2123,6 +2162,7 @@ break
 
 case 'autoreplystatus':
 case 'autoreply': {
+    await X.sendMessage(m.chat, { react: { text: '💬', key: m.key } })
 if (!isOwner) return reply(mess.OnlyOwner)
 let arsArg = args.join(' ').trim()
 if (!arsArg) {
@@ -2143,6 +2183,7 @@ break
 
 case 'antistatusmention':
 case 'antismention': {
+    await X.sendMessage(m.chat, { react: { text: '🚫', key: m.key } })
 if (!isOwner) return reply(mess.OnlyOwner)
 let asmArg = (args[0] || '').toLowerCase()
 if (!asmArg) {
@@ -2211,6 +2252,7 @@ break
 case 'botsettings':
 case 'settings':
 case 'botconfig': {
+    await X.sendMessage(m.chat, { react: { text: '⚙️', key: m.key } })
 if (!isOwner) return reply(mess.OnlyOwner)
 const on = '✅ ON'
 const off = '❌ OFF'
@@ -2498,6 +2540,7 @@ break
             
             
                         case 'add': {
+    await X.sendMessage(m.chat, { react: { text: '➕', key: m.key } })
                                 if (!m.isGroup) return reply(mess.OnlyGrup);
                                 if (!isAdmins && !isOwner) return reply(mess.admin);
                                 if (!isBotAdmins) return reply(mess.botAdmin);
@@ -2684,6 +2727,7 @@ break
                         break;
 
                         case 'promote': {
+    await X.sendMessage(m.chat, { react: { text: '⬆️', key: m.key } })
                                 if (!m.isGroup) return reply(mess.OnlyGrup)
                                 if (!isOwner && !isAdmins) return reply(mess.admin)
                                 if (!isBotAdmins) return reply(mess.botAdmin)
@@ -2705,6 +2749,7 @@ break
                         break
 
                         case 'demote': {
+    await X.sendMessage(m.chat, { react: { text: '⬇️', key: m.key } })
                                 if (!m.isGroup) return reply(mess.OnlyGrup)
                                 if (!isOwner && !isAdmins) return reply(mess.admin)
                                 if (!isBotAdmins) return reply(mess.botAdmin)
@@ -3560,6 +3605,7 @@ break
 // ChatBoAI — English-only AI, per-message or toggled per-chat
 case 'chatboai':
 case 'aichat': {
+    await X.sendMessage(m.chat, { react: { text: '🤖', key: m.key } })
 let _cbaArg = (args[0] || '').toLowerCase()
 
 // Toggle on/off — owner or group admin only
@@ -3590,6 +3636,7 @@ try {
 // AI ChatBot — Separate DM / Group / Global modes (Owner Control)
 case 'setaimode':
 case 'aimode': {
+    await X.sendMessage(m.chat, { react: { text: '🤖', key: m.key } })
     if (!isOwner) return reply(mess.OnlyOwner)
     const _mode = (args[0] || '').toLowerCase()
     const _action = (args[1] || '').toLowerCase()
@@ -4158,6 +4205,7 @@ case 'gpt-4o':{
 }
  
 case 'ai':{
+    await X.sendMessage(m.chat, { react: { text: '🤖', key: m.key } })
   if (!text) {
     return reply(`What would you like to ask?`);
   }
@@ -4380,6 +4428,7 @@ break
 //━━━━━━━━━━━━━━━━━━━━━━━━//
 // OWNER MENU COMMANDS
 case 'autotyping': {
+    await X.sendMessage(m.chat, { react: { text: '⌨️', key: m.key } })
 if (!isOwner) return reply(mess.OnlyOwner)
 let atArg = (args[0] || '').toLowerCase()
 if (atArg === 'on') { global.fakePresence = 'typing'; reply('*Auto Typing ON*') }
@@ -4388,6 +4437,7 @@ else reply(`*Auto Typing: ${global.fakePresence === 'typing' ? 'ON' : 'OFF'}*\nU
 } break
 
 case 'autoreact': {
+    await X.sendMessage(m.chat, { react: { text: '👍', key: m.key } })
 if (!isOwner) return reply(mess.OnlyOwner)
 let arArg = (args[0] || '').toLowerCase()
 if (!arArg) { reply(`*Auto React: ${global.autoReact ? 'ON' : 'OFF'}*\nEmoji: ${global.autoReactEmoji || '👍'}\nUsage: ${prefix}autoreact on/off\n${prefix}autoreact [emoji]`) }
@@ -4570,6 +4620,7 @@ if (modeArg === 'public') {
 
 // GROUP ADMIN COMMANDS
 case 'mute': {
+    await X.sendMessage(m.chat, { react: { text: '🔇', key: m.key } })
 if (!m.isGroup) return reply(mess.OnlyGrup)
 if (!isAdmins && !isOwner) return reply(mess.admin)
 if (!isBotAdmins) return reply(mess.botAdmin)
@@ -4584,6 +4635,7 @@ else reply(mess.error)
 } break
 
 case 'unmute': {
+    await X.sendMessage(m.chat, { react: { text: '🔊', key: m.key } })
 if (!m.isGroup) return reply(mess.OnlyGrup)
 if (!isAdmins && !isOwner) return reply(mess.admin)
 if (!isBotAdmins) return reply(mess.botAdmin)
@@ -4598,6 +4650,7 @@ else reply(mess.error)
 } break
 
 case 'ban': {
+    await X.sendMessage(m.chat, { react: { text: '🚫', key: m.key } })
 if (!m.isGroup) return reply(mess.OnlyGrup)
 if (!isAdmins && !isOwner) return reply(mess.admin)
 let banUser = (m.mentionedJid && m.mentionedJid[0]) ? m.mentionedJid[0] : m.quoted ? m.quoted.sender : text ? text.replace(/[^0-9]/g, '') + '@s.whatsapp.net' : null
@@ -4622,6 +4675,7 @@ X.sendMessage(from, { text: `✅ *@${unbanUser.split('@')[0]} has been unbanned.
 } break
 
 case 'antibadword': {
+    await X.sendMessage(m.chat, { react: { text: '🤬', key: m.key } })
 if (!m.isGroup) return reply(mess.OnlyGrup)
 if (!isAdmins && !isOwner) return reply(mess.admin)
 let abwArg = (args[0] || '').toLowerCase()
@@ -4631,6 +4685,7 @@ else reply(`🛡️ *Anti Badword: ${global.antiBadword ? '✅ ON' : '❌ OFF'}*
 } break
 
 case 'antitag': {
+    await X.sendMessage(m.chat, { react: { text: '🏷️', key: m.key } })
 if (!m.isGroup) return reply(mess.OnlyGrup)
 if (!isAdmins && !isOwner) return reply(mess.admin)
 let atgArg = (args[0] || '').toLowerCase()
@@ -4640,6 +4695,7 @@ else reply(`🛡️ *Anti Tag: ${global.antiTag ? '✅ ON' : '❌ OFF'}*\n\n📌
 } break
 
 case 'antisticker': {
+    await X.sendMessage(m.chat, { react: { text: '🖼️', key: m.key } })
 if (!m.isGroup) return reply(mess.OnlyGrup)
 if (!isAdmins && !isOwner) return reply(mess.admin)
 let asArg = (args[0] || '').toLowerCase()
@@ -4649,6 +4705,7 @@ else reply(`🛡️ *Anti Sticker: ${global.antiSticker ? '✅ ON' : '❌ OFF'}*
 } break
 
 case 'antidemote': {
+    await X.sendMessage(m.chat, { react: { text: '⚠️', key: m.key } })
 if (!m.isGroup) return reply(mess.OnlyGrup)
 if (!isAdmins && !isOwner) return reply(mess.admin)
 let adArg2 = (args[0] || '').toLowerCase()
@@ -4705,6 +4762,7 @@ else reply(`❌ *Failed to update group photo.*\n_${err.message || 'Unknown erro
 } break
 
 case 'open': {
+    await X.sendMessage(m.chat, { react: { text: '🔓', key: m.key } })
 if (!m.isGroup) return reply(mess.OnlyGrup)
 if (!isAdmins && !isOwner) return reply(mess.admin)
 if (!isBotAdmins) return reply(mess.botAdmin)
@@ -4719,6 +4777,7 @@ else reply(mess.error)
 } break
 
 case 'close': {
+    await X.sendMessage(m.chat, { react: { text: '🔒', key: m.key } })
 if (!m.isGroup) return reply(mess.OnlyGrup)
 if (!isAdmins && !isOwner) return reply(mess.admin)
 if (!isBotAdmins) return reply(mess.botAdmin)
@@ -4733,6 +4792,7 @@ else reply(mess.error)
 } break
 
 case 'resetlink': {
+    await X.sendMessage(m.chat, { react: { text: '🔄', key: m.key } })
 if (!m.isGroup) return reply(mess.OnlyGrup)
 if (!isAdmins && !isOwner) return reply(mess.admin)
 if (!isBotAdmins) return reply(mess.botAdmin)
@@ -4780,6 +4840,7 @@ if (gbArg === 'on') {
 
 // GROUP TOOLS COMMANDS
 case 'tagall': {
+    await X.sendMessage(m.chat, { react: { text: '📢', key: m.key } })
 if (!m.isGroup) return reply(mess.OnlyGrup)
 if (!isAdmins && !isOwner) return reply(mess.admin)
 let tagMsg = text || '📢 Tag All Members'
@@ -4797,6 +4858,7 @@ X.sendMessage(from, { text: text, mentions: tagMentions }, { quoted: m })
 } break
 
 case 'hidetag': {
+    await X.sendMessage(m.chat, { react: { text: '🏷️', key: m.key } })
 if (!m.isGroup) return reply(mess.OnlyGrup)
 if (!isAdmins && !isOwner) return reply(mess.admin)
 let htText = text || ''
@@ -4833,6 +4895,7 @@ reply(gInfo)
 } break
 
 case 'admins': {
+    await X.sendMessage(m.chat, { react: { text: '👑', key: m.key } })
 if (!m.isGroup) return reply(mess.OnlyGrup)
 let adminList = '*Group Admins:*\n\n'
 let adminMentions = []
@@ -4941,6 +5004,7 @@ reply(data?.choices?.[0]?.message?.content || 'No response.')
 
 case 'vision':
 case 'analyse': {
+    await X.sendMessage(m.chat, { react: { text: '🔍', key: m.key } })
 if (!m.quoted || !/image/.test(m.quoted.mimetype || '')) return reply(`┏━━━━━━━━━━━━━━━━━━━━━━━┓\n┃  🔍 *IMAGE ANALYSIS*\n┗━━━━━━━━━━━━━━━━━━━━━━━┛\n\n*Usage:* Reply to an image with *${prefix}${command}*\nOptionally add a question:\n• ${prefix}${command} What is in this image?\n• ${prefix}${command} Read all the text in this image`)
 try {
 let question = text || 'Describe this image in detail. Include objects, people, colors, text, and any notable elements.'
@@ -5271,6 +5335,7 @@ reply(songInfo)
 } break
 
 case 'apk': {
+    await X.sendMessage(m.chat, { react: { text: '📲', key: m.key } })
 if (!text) return reply(`Example: ${prefix}apk WhatsApp`)
 try {
 let res = await fetch(`https://api.maizapk.my.id/search?q=${encodeURIComponent(text)}`)
@@ -5529,6 +5594,7 @@ try {
 case 'simage':
 case 'timage':
 case 'toimage': {
+    await X.sendMessage(m.chat, { react: { text: '🖼️', key: m.key } })
 // Convert sticker (webp) → image (jpeg/png)
 const _qmtype = m.quoted?.mtype || ''
 const _qmime = m.quoted?.mimetype || m.quoted?.msg?.mimetype || ''
@@ -5760,6 +5826,7 @@ delete global.hangmanGames[m.chat]
 } break
 
 case 'trivia': {
+    await X.sendMessage(m.chat, { react: { text: '🧠', key: m.key } })
 try {
 let res = await fetch('https://opentdb.com/api.php?amount=1&type=multiple')
 let data = await res.json()
@@ -5788,16 +5855,19 @@ reply(`*Correct!* Well done, @${sender.split('@')[0]}! 🎉`)
 } break
 
 case 'truth': {
+    await X.sendMessage(m.chat, { react: { text: '💬', key: m.key } })
 let truths = ['What is your biggest fear?', 'What is the most embarrassing thing you have done?', 'What is a secret you have never told anyone?', 'Who was your first crush?', 'What is the worst lie you have told?', 'What is your guilty pleasure?', 'Have you ever cheated on a test?', 'What is the most childish thing you still do?', 'What is your biggest insecurity?', 'What was your most awkward date?', 'Have you ever been caught lying?', 'What is the craziest thing on your bucket list?', 'What is the weirdest dream you have had?', 'If you could be invisible for a day what would you do?', 'What is the most stupid thing you have ever done?']
 reply(`*Truth:*\n${truths[Math.floor(Math.random() * truths.length)]}`)
 } break
 
 case 'dare': {
+    await X.sendMessage(m.chat, { react: { text: '🎯', key: m.key } })
 let dares = ['Send a voice note singing your favorite song.', 'Change your profile picture to something funny for 1 hour.', 'Send the last photo in your gallery.', 'Text your crush right now.', 'Do 10 pushups and send a video.', 'Send a voice note doing your best animal impression.', 'Let someone else send a message from your phone.', 'Share your screen time report.', 'Send a selfie right now without filters.', 'Call the 5th person in your contacts and sing happy birthday.', 'Post a childhood photo in the group.', 'Let the group choose your status for 24 hours.', 'Send a voice note speaking in an accent.', 'Do a handstand and send proof.', 'Type with your eyes closed for the next message.']
 reply(`*Dare:*\n${dares[Math.floor(Math.random() * dares.length)]}`)
 } break
 
 case '8ball': {
+    await X.sendMessage(m.chat, { react: { text: '🎱', key: m.key } })
 if (!text) return reply(`Example: ${prefix}8ball Will I pass my exam?`)
 let responses8 = ['It is certain.', 'It is decidedly so.', 'Without a doubt.', 'Yes definitely.', 'You may rely on it.', 'As I see it, yes.', 'Most likely.', 'Outlook good.', 'Yes.', 'Signs point to yes.', 'Reply hazy, try again.', 'Ask again later.', 'Better not tell you now.', 'Cannot predict now.', 'Concentrate and ask again.', 'Don\'t count on it.', 'My reply is no.', 'My sources say no.', 'Outlook not so good.', 'Very doubtful.']
 reply(`*🎱 ${text}*\n\n${responses8[Math.floor(Math.random() * responses8.length)]}`)
@@ -5806,18 +5876,21 @@ reply(`*🎱 ${text}*\n\n${responses8[Math.floor(Math.random() * responses8.leng
 case 'cf':
 case 'coinflip':
 case 'flip': {
+    await X.sendMessage(m.chat, { react: { text: '🪙', key: m.key } })
 let coin = Math.random() < 0.5 ? 'Heads' : 'Tails'
 reply(`*Coin Flip:* 🪙 ${coin}!`)
 } break
 
 case 'dice':
 case 'roll': {
+    await X.sendMessage(m.chat, { react: { text: '🎲', key: m.key } })
 let sides = parseInt(args[0]) || 6
 let result = Math.floor(Math.random() * sides) + 1
 reply(`*Dice Roll (d${sides}):* 🎲 ${result}`)
 } break
 
 case 'rps': {
+    await X.sendMessage(m.chat, { react: { text: '✊', key: m.key } })
 let choices = ['rock', 'paper', 'scissors']
 let userChoice = (args[0] || '').toLowerCase()
 if (!['rock', 'paper', 'scissors', 'r', 'p', 's'].includes(userChoice)) return reply(`Usage: ${prefix}rps rock/paper/scissors`)
@@ -5830,6 +5903,7 @@ reply(`*Rock Paper Scissors*\n\nYou: ${userChoice}\nBot: ${botChoice}\n\n*${rpsR
 } break
 
 case 'slot': {
+    await X.sendMessage(m.chat, { react: { text: '🎰', key: m.key } })
 let symbols = ['🍒', '🍋', '🍊', '🍇', '💎', '7️⃣', '🔔']
 let s1 = symbols[Math.floor(Math.random() * symbols.length)]
 let s2 = symbols[Math.floor(Math.random() * symbols.length)]
@@ -5841,42 +5915,50 @@ reply(`*🎰 Slot Machine*\n\n[ ${s1} | ${s2} | ${s3} ]\n\n${slotWin}`)
 //━━━━━━━━━━━━━━━━━━━━━━━━//
 // Fun & Social Commands
 case 'compliment': {
+    await X.sendMessage(m.chat, { react: { text: '😊', key: m.key } })
 let compliments = ['You are an amazing person!', 'Your smile lights up the room!', 'You are incredibly talented!', 'The world is better with you in it!', 'You have a heart of gold!', 'Your kindness is inspiring!', 'You are a ray of sunshine!', 'You make everything better!', 'You are one of a kind!', 'Your energy is contagious!']
 let target = (m.mentionedJid && m.mentionedJid[0]) ? `@${m.mentionedJid[0].split('@')[0]}` : pushname
 reply(`*Compliment for ${target}:*\n${compliments[Math.floor(Math.random() * compliments.length)]}`)
 } break
 
 case 'insult': {
+    await X.sendMessage(m.chat, { react: { text: '😤', key: m.key } })
 let insults = ['You are the human equivalent of a participation award.', 'If you were a spice, you would be flour.', 'You bring everyone so much joy when you leave.', 'You are like a cloud. When you disappear it is a beautiful day.', 'You are proof that even evolution makes mistakes.', 'Light travels faster than sound, which is why you seemed bright until you spoke.']
 let target2 = (m.mentionedJid && m.mentionedJid[0]) ? `@${m.mentionedJid[0].split('@')[0]}` : pushname
 reply(`*Roast for ${target2}:*\n${insults[Math.floor(Math.random() * insults.length)]}`)
 } break
 
 case 'flirt': {
+    await X.sendMessage(m.chat, { react: { text: '😏', key: m.key } })
 let flirts = ['Are you a magician? Because whenever I look at you, everyone else disappears.', 'Do you have a map? I keep getting lost in your eyes.', 'Are you a campfire? Because you are hot and I want s\'more.', 'Is your name Google? Because you have everything I have been searching for.', 'Do you believe in love at first sight, or should I walk by again?', 'If beauty were time, you would be an eternity.']
 reply(`*Flirt:*\n${flirts[Math.floor(Math.random() * flirts.length)]}`)
 } break
 
 case 'shayari': {
+    await X.sendMessage(m.chat, { react: { text: '✨', key: m.key } })
 let shayaris = ['Dil mein tere liye jagah hai,\nPar tu door hai, yeh kya wajah hai.', 'Teri yaad mein hum pagal hue,\nDuniya se hum bekhabar hue.', 'Mohabbat ka koi mol nahi,\nDil hai yeh koi phool nahi.', 'Zindagi mein teri kami hai,\nHar khushi adhuri si hai.', 'Tere bina zindagi se koi shikwa nahi,\nTere bina zindagi hai toh kya.']
 reply(`*Shayari:*\n${shayaris[Math.floor(Math.random() * shayaris.length)]}`)
 } break
 
 case 'goodnight': {
+    await X.sendMessage(m.chat, { react: { text: '🌙', key: m.key } })
 let gn = ['Sweet dreams! May tomorrow bring you joy. 🌙', 'Good night! Sleep tight and don\'t let the bugs bite! 💤', 'Wishing you a peaceful night full of beautiful dreams. ✨', 'Close your eyes and let the stars guide your dreams. 🌟', 'Good night! Tomorrow is a new opportunity. Rest well! 😴']
 reply(`*Good Night:*\n${gn[Math.floor(Math.random() * gn.length)]}`)
 } break
 
 case 'roseday': {
+    await X.sendMessage(m.chat, { react: { text: '🌹', key: m.key } })
 reply('🌹 *Happy Rose Day!* 🌹\nRoses are red, violets are blue, sending this beautiful rose just for you! May your day be as beautiful as a garden full of roses.')
 } break
 
 case 'character': {
+    await X.sendMessage(m.chat, { react: { text: '🎌', key: m.key } })
 let characters = ['Naruto Uzumaki', 'Goku', 'Luffy', 'Batman', 'Spider-Man', 'Iron Man', 'Sherlock Holmes', 'Harry Potter', 'Pikachu', 'Mario', 'Sonic', 'Link (Zelda)', 'Levi Ackerman', 'Tanjiro Kamado', 'Eren Yeager', 'Gojo Satoru']
 reply(`*Random Character:*\n${characters[Math.floor(Math.random() * characters.length)]}`)
 } break
 
 case 'ship': {
+    await X.sendMessage(m.chat, { react: { text: '💑', key: m.key } })
 if (!m.isGroup) return reply(mess.OnlyGrup)
 let members = participants.map(p => p.id)
 let p1 = m.mentionedJid && m.mentionedJid[0] ? m.mentionedJid[0] : members[Math.floor(Math.random() * members.length)]
@@ -5887,23 +5969,27 @@ X.sendMessage(from, { text: `*💕 Love Ship 💕*\n\n@${p1.split('@')[0]} ❤�
 } break
 
 case 'simp': {
+    await X.sendMessage(m.chat, { react: { text: '😍', key: m.key } })
 let simpTarget = (m.mentionedJid && m.mentionedJid[0]) ? m.mentionedJid[0] : m.quoted ? m.quoted.sender : sender
 let simpLevel = Math.floor(Math.random() * 101)
 X.sendMessage(from, { text: `*Simp Meter:*\n@${simpTarget.split('@')[0]}\n\n${'🟩'.repeat(Math.floor(simpLevel/10))}${'⬜'.repeat(10 - Math.floor(simpLevel/10))} ${simpLevel}%\n\n${simpLevel > 80 ? 'MAXIMUM SIMP! 😂' : simpLevel > 50 ? 'Moderate simp 😏' : 'Not a simp 😎'}`, mentions: [simpTarget] }, { quoted: m })
 } break
 
 case 'wasted': {
+    await X.sendMessage(m.chat, { react: { text: '💀', key: m.key } })
 let wastedTarget = (m.mentionedJid && m.mentionedJid[0]) ? m.mentionedJid[0] : m.quoted ? m.quoted.sender : sender
 X.sendMessage(from, { text: `*WASTED*\n\n@${wastedTarget.split('@')[0]} is WASTED 💀\n\nR.I.P.`, mentions: [wastedTarget] }, { quoted: m })
 } break
 
 case 'stupid': {
+    await X.sendMessage(m.chat, { react: { text: '🤪', key: m.key } })
 let stupidTarget = (m.mentionedJid && m.mentionedJid[0]) ? m.mentionedJid[0] : m.quoted ? m.quoted.sender : sender
 let stupidLevel = Math.floor(Math.random() * 101)
 X.sendMessage(from, { text: `*Stupid Meter:*\n@${stupidTarget.split('@')[0]}\n\n${'🧠'.repeat(Math.floor(stupidLevel/10))}${'⬜'.repeat(10 - Math.floor(stupidLevel/10))} ${stupidLevel}%\n\n${stupidLevel > 80 ? 'Extremely stupid 🤡' : stupidLevel > 50 ? 'Below average IQ 😅' : 'Actually smart! 🧐'}`, mentions: [stupidTarget] }, { quoted: m })
 } break
 
 case 'joke': {
+    await X.sendMessage(m.chat, { react: { text: '😂', key: m.key } })
 try {
 let res = await fetch('https://v2.jokeapi.dev/joke/Any?safe-mode')
 let data = await res.json()
@@ -5914,6 +6000,7 @@ else reply(`*😂 Joke:*\n${data.setup}\n\n${data.delivery}`)
 
 case 'quote':
 case 'motivation': {
+    await X.sendMessage(m.chat, { react: { text: '💪', key: m.key } })
 const motivations = [
 // Success & Hard Work
 { q: "The only way to do great work is to love what you do.", a: "Steve Jobs" },
@@ -6072,6 +6159,7 @@ reply(`┏━━━━━━━━━━━━━━━━━━━━━━━�
 } break
 
 case 'fact': {
+    await X.sendMessage(m.chat, { react: { text: '💡', key: m.key } })
 try {
 let res = await fetch('https://uselessfacts.jsph.pl/api/v2/facts/random')
 let data = await res.json()
@@ -6085,6 +6173,7 @@ reply(`*📚 Random Fact:*\n${facts[Math.floor(Math.random() * facts.length)]}`)
 //━━━━━━━━━━━━━━━━━━━━━━━━//
 // Anime Commands
 case 'neko': {
+    await X.sendMessage(m.chat, { react: { text: '🐱', key: m.key } })
 try {
 let res = await fetch('https://nekos.life/api/v2/img/neko')
 let data = await res.json()
@@ -6093,6 +6182,7 @@ await X.sendMessage(m.chat, { image: { url: data.url }, caption: '*Neko!* 🐱' 
 } break
 
 case 'waifu': {
+    await X.sendMessage(m.chat, { react: { text: '💕', key: m.key } })
 try {
 let res = await fetch('https://api.waifu.pics/sfw/waifu')
 let data = await res.json()
@@ -6101,6 +6191,7 @@ await X.sendMessage(m.chat, { image: { url: data.url }, caption: '*Waifu!* 💕'
 } break
 
 case 'loli': {
+    await X.sendMessage(m.chat, { react: { text: '🌸', key: m.key } })
 try {
 let res = await fetch('https://nekos.life/api/v2/img/neko')
 let data = await res.json()
@@ -6109,6 +6200,7 @@ await X.sendMessage(m.chat, { image: { url: data.url }, caption: '*Anime!* 🌸'
 } break
 
 case 'nom': {
+    await X.sendMessage(m.chat, { react: { text: '😋', key: m.key } })
 try {
 let res = await fetch('https://api.waifu.pics/sfw/nom')
 let data = await res.json()
@@ -6117,6 +6209,7 @@ await X.sendMessage(m.chat, { image: { url: data.url }, caption: '*Nom nom!* �
 } break
 
 case 'poke': {
+    await X.sendMessage(m.chat, { react: { text: '👉', key: m.key } })
 try {
 let res = await fetch('https://api.waifu.pics/sfw/poke')
 let data = await res.json()
@@ -6126,6 +6219,7 @@ await X.sendMessage(m.chat, { image: { url: data.url }, caption: `*${pushname} p
 } break
 
 case 'cry': {
+    await X.sendMessage(m.chat, { react: { text: '😢', key: m.key } })
 try {
 let res = await fetch('https://api.waifu.pics/sfw/cry')
 let data = await res.json()
@@ -6134,6 +6228,7 @@ await X.sendMessage(m.chat, { image: { url: data.url }, caption: `*${pushname} i
 } break
 
 case 'kiss': {
+    await X.sendMessage(m.chat, { react: { text: '😘', key: m.key } })
 try {
 let res = await fetch('https://api.waifu.pics/sfw/kiss')
 let data = await res.json()
@@ -6143,6 +6238,7 @@ await X.sendMessage(m.chat, { image: { url: data.url }, caption: `*${pushname} k
 } break
 
 case 'pat': {
+    await X.sendMessage(m.chat, { react: { text: '🤝', key: m.key } })
 try {
 let res = await fetch('https://api.waifu.pics/sfw/pat')
 let data = await res.json()
@@ -6152,6 +6248,7 @@ await X.sendMessage(m.chat, { image: { url: data.url }, caption: `*${pushname} p
 } break
 
 case 'hug': {
+    await X.sendMessage(m.chat, { react: { text: '🤗', key: m.key } })
 try {
 let res = await fetch('https://api.waifu.pics/sfw/hug')
 let data = await res.json()
@@ -6161,6 +6258,7 @@ await X.sendMessage(m.chat, { image: { url: data.url }, caption: `*${pushname} h
 } break
 
 case 'wink': {
+    await X.sendMessage(m.chat, { react: { text: '😉', key: m.key } })
 try {
 let res = await fetch('https://api.waifu.pics/sfw/wink')
 let data = await res.json()
@@ -6169,6 +6267,7 @@ await X.sendMessage(m.chat, { image: { url: data.url }, caption: `*${pushname} w
 } break
 
 case 'facepalm': {
+    await X.sendMessage(m.chat, { react: { text: '🤦', key: m.key } })
 try {
 let res = await fetch('https://api.waifu.pics/sfw/cringe')
 let data = await res.json()
@@ -6177,6 +6276,7 @@ await X.sendMessage(m.chat, { image: { url: data.url }, caption: `*${pushname} f
 } break
 
 case 'anime': {
+    await X.sendMessage(m.chat, { react: { text: '🎌', key: m.key } })
 if (!text) return reply(`Example: ${prefix}anime Naruto`)
 try {
 let res = await fetch(`https://api.jikan.moe/v4/anime?q=${encodeURIComponent(text)}&limit=5`)
@@ -6194,6 +6294,7 @@ await X.sendMessage(m.chat, { image: { url: data.data[0].images.jpg.image_url },
 // All outputs are plain Unicode text — everyone sees them in any WhatsApp chat
 // Owner uses the command, copies the output, pastes it anywhere
 case 'setfont': {
+    await X.sendMessage(m.chat, { react: { text: '✏️', key: m.key } })
 // Activate persistent font mode — all your messages auto-convert until you run .fontoff
 if (!isOwner) return reply(mess.OnlyOwner)
 const _validFonts = ['bold','italic','bolditalic','mono','serif','serifbold','serifitalic','scriptfont','scriptbold','fraktur','frakturbold','doublestruck','smallcaps','bubble','bubblebold','square','squarebold','wide','upsidedown','strikethrough','underline','aesthetic','tiny','cursive','gothic','medieval','oldeng','inverted','mirror','currency','dotted','parenthesis','flags']
@@ -6206,6 +6307,7 @@ reply(`✅ *Font mode set to: ${_chosen}*\n\n_Every message you send will now ap
 
 case 'fontoff':
 case 'resetfont': {
+    await X.sendMessage(m.chat, { react: { text: '✏️', key: m.key } })
 if (!isOwner) return reply(mess.OnlyOwner)
 global.ownerFontMode = 'off'
 reply(`✅ *Font mode disabled.*\n_Your messages will now send normally._`)
@@ -6213,11 +6315,13 @@ reply(`✅ *Font mode disabled.*\n_Your messages will now send normally._`)
 
 case 'font':
 case 'fonts': {
+    await X.sendMessage(m.chat, { react: { text: '🔤', key: m.key } })
 if (!isOwner) return reply(mess.OnlyOwner)
 reply(`*🔤 Unicode Font Converter*\n_Visible to everyone — no bot needed!_\n\n┏━━━━━━━━━━━━━━━━━━━━━━━┓\n┃ *— Classic —*\n┃➤ ${prefix}bold  ${prefix}italic  ${prefix}bolditalic\n┃➤ ${prefix}mono  ${prefix}serif  ${prefix}serifbold\n┃➤ ${prefix}serifitalic\n┃ *— Decorative —*\n┃➤ ${prefix}scriptfont  ${prefix}scriptbold\n┃➤ ${prefix}fraktur  ${prefix}frakturbold\n┃➤ ${prefix}doublestruck  ${prefix}smallcaps\n┃➤ ${prefix}medieval  ${prefix}gothic  ${prefix}oldeng\n┃➤ ${prefix}cursive  ${prefix}aesthetic\n┃ *— Fun & Stylized —*\n┃➤ ${prefix}bubble  ${prefix}bubblebold\n┃➤ ${prefix}square  ${prefix}squarebold\n┃➤ ${prefix}wide  ${prefix}tiny\n┃➤ ${prefix}dotted  ${prefix}currency\n┃ *— Transform —*\n┃➤ ${prefix}upsidedown  ${prefix}inverted\n┃➤ ${prefix}mirror  ${prefix}strikethrough\n┃➤ ${prefix}underline\n┃➤ ${prefix}allfonts [text]\n┗━━━━━━━━━━━━━━━━━━━━━━━┛\n\n_Tip: ${prefix}allfonts hello — shows all 32 fonts at once!_\n_Persistent mode: ${prefix}setfont [name]_`)
 } break
 
 case 'bold': {
+    await X.sendMessage(m.chat, { react: { text: '𝐁', key: m.key } })
 if (!isOwner) return reply(mess.OnlyOwner)
 let ftIn = text || (m.quoted && (m.quoted.text || m.quoted.body || m.quoted.caption || '').trim()) || ''
 if (!ftIn) return reply(`Usage: ${prefix}bold [text]`)
@@ -6226,6 +6330,7 @@ reply([...ftIn].map(c=>boldMap[c]||c).join(''))
 } break
 
 case 'italic': {
+    await X.sendMessage(m.chat, { react: { text: '𝐼', key: m.key } })
 if (!isOwner) return reply(mess.OnlyOwner)
 let ftIn = text || (m.quoted && (m.quoted.text || m.quoted.body || m.quoted.caption || '').trim()) || ''
 if (!ftIn) return reply(`Usage: ${prefix}italic [text]`)
@@ -6234,6 +6339,7 @@ reply([...ftIn].map(c=>italicMap[c]||c).join(''))
 } break
 
 case 'bolditalic': {
+    await X.sendMessage(m.chat, { react: { text: '𝑩', key: m.key } })
 if (!isOwner) return reply(mess.OnlyOwner)
 let ftIn = text || (m.quoted && (m.quoted.text || m.quoted.body || m.quoted.caption || '').trim()) || ''
 if (!ftIn) return reply(`Usage: ${prefix}bolditalic [text]`)
@@ -6242,6 +6348,7 @@ reply([...ftIn].map(c=>biMap[c]||c).join(''))
 } break
 
 case 'mono': {
+    await X.sendMessage(m.chat, { react: { text: '𝙼', key: m.key } })
 if (!isOwner) return reply(mess.OnlyOwner)
 let ftIn = text || (m.quoted && (m.quoted.text || m.quoted.body || m.quoted.caption || '').trim()) || ''
 if (!ftIn) return reply(`Usage: ${prefix}mono [text]`)
@@ -6250,6 +6357,7 @@ reply([...ftIn].map(c=>monoMap[c]||c).join(''))
 } break
 
 case 'serif': {
+    await X.sendMessage(m.chat, { react: { text: '𝐒', key: m.key } })
 if (!isOwner) return reply(mess.OnlyOwner)
 let ftIn = text || (m.quoted && (m.quoted.text || m.quoted.body || m.quoted.caption || '').trim()) || ''
 if (!ftIn) return reply(`Usage: ${prefix}serif [text]`)
@@ -6258,6 +6366,7 @@ reply([...ftIn].map(c=>serifMap[c]||c).join(''))
 } break
 
 case 'serifbold': {
+    await X.sendMessage(m.chat, { react: { text: '𝐒', key: m.key } })
 if (!isOwner) return reply(mess.OnlyOwner)
 let ftIn = text || (m.quoted && (m.quoted.text || m.quoted.body || m.quoted.caption || '').trim()) || ''
 if (!ftIn) return reply(`Usage: ${prefix}serifbold [text]`)
@@ -6266,6 +6375,7 @@ reply([...ftIn].map(c=>sbMap[c]||c).join(''))
 } break
 
 case 'serifitalic': {
+    await X.sendMessage(m.chat, { react: { text: '𝑆', key: m.key } })
 if (!isOwner) return reply(mess.OnlyOwner)
 let ftIn = text || (m.quoted && (m.quoted.text || m.quoted.body || m.quoted.caption || '').trim()) || ''
 if (!ftIn) return reply(`Usage: ${prefix}serifitalic [text]`)
@@ -6274,6 +6384,7 @@ reply([...ftIn].map(c=>siMap[c]||c).join(''))
 } break
 
 case 'scriptfont': {
+    await X.sendMessage(m.chat, { react: { text: '𝒮', key: m.key } })
 if (!isOwner) return reply(mess.OnlyOwner)
 let ftIn = text || (m.quoted && (m.quoted.text || m.quoted.body || m.quoted.caption || '').trim()) || ''
 if (!ftIn) return reply(`Usage: ${prefix}scriptfont [text]`)
@@ -6282,6 +6393,7 @@ reply([...ftIn].map(c=>scriptMap[c]||c).join(''))
 } break
 
 case 'scriptbold': {
+    await X.sendMessage(m.chat, { react: { text: '𝓢', key: m.key } })
 if (!isOwner) return reply(mess.OnlyOwner)
 let ftIn = text || (m.quoted && (m.quoted.text || m.quoted.body || m.quoted.caption || '').trim()) || ''
 if (!ftIn) return reply(`Usage: ${prefix}scriptbold [text]`)
@@ -6290,6 +6402,7 @@ reply([...ftIn].map(c=>scbMap[c]||c).join(''))
 } break
 
 case 'fraktur': {
+    await X.sendMessage(m.chat, { react: { text: '𝔉', key: m.key } })
 if (!isOwner) return reply(mess.OnlyOwner)
 let ftIn = text || (m.quoted && (m.quoted.text || m.quoted.body || m.quoted.caption || '').trim()) || ''
 if (!ftIn) return reply(`Usage: ${prefix}fraktur [text]`)
@@ -6298,6 +6411,7 @@ reply([...ftIn].map(c=>frakMap[c]||c).join(''))
 } break
 
 case 'frakturbold': {
+    await X.sendMessage(m.chat, { react: { text: '𝕱', key: m.key } })
 if (!isOwner) return reply(mess.OnlyOwner)
 let ftIn = text || (m.quoted && (m.quoted.text || m.quoted.body || m.quoted.caption || '').trim()) || ''
 if (!ftIn) return reply(`Usage: ${prefix}frakturbold [text]`)
@@ -6306,6 +6420,7 @@ reply([...ftIn].map(c=>fbMap[c]||c).join(''))
 } break
 
 case 'doublestruck': {
+    await X.sendMessage(m.chat, { react: { text: '𝔻', key: m.key } })
 if (!isOwner) return reply(mess.OnlyOwner)
 let ftIn = text || (m.quoted && (m.quoted.text || m.quoted.body || m.quoted.caption || '').trim()) || ''
 if (!ftIn) return reply(`Usage: ${prefix}doublestruck [text]`)
@@ -6314,6 +6429,7 @@ reply([...ftIn].map(c=>dsMap[c]||c).join(''))
 } break
 
 case 'smallcaps': {
+    await X.sendMessage(m.chat, { react: { text: 'ꜱ', key: m.key } })
 if (!isOwner) return reply(mess.OnlyOwner)
 let ftIn = text || (m.quoted && (m.quoted.text || m.quoted.body || m.quoted.caption || '').trim()) || ''
 if (!ftIn) return reply(`Usage: ${prefix}smallcaps [text]`)
@@ -6322,6 +6438,7 @@ reply([...ftIn].map(c=>scMap[c]||c).join(''))
 } break
 
 case 'bubble': {
+    await X.sendMessage(m.chat, { react: { text: '🔵', key: m.key } })
 if (!isOwner) return reply(mess.OnlyOwner)
 let ftIn = text || (m.quoted && (m.quoted.text || m.quoted.body || m.quoted.caption || '').trim()) || ''
 if (!ftIn) return reply(`Usage: ${prefix}bubble [text]`)
@@ -6330,6 +6447,7 @@ reply([...ftIn].map(c=>bubMap[c]||c).join(''))
 } break
 
 case 'bubblebold': {
+    await X.sendMessage(m.chat, { react: { text: '🟦', key: m.key } })
 if (!isOwner) return reply(mess.OnlyOwner)
 let ftIn = text || (m.quoted && (m.quoted.text || m.quoted.body || m.quoted.caption || '').trim()) || ''
 if (!ftIn) return reply(`Usage: ${prefix}bubblebold [text]`)
@@ -6338,6 +6456,7 @@ reply([...ftIn].map(c=>bbbMap[c]||c).join(''))
 } break
 
 case 'square': {
+    await X.sendMessage(m.chat, { react: { text: '🟥', key: m.key } })
 if (!isOwner) return reply(mess.OnlyOwner)
 let ftIn = text || (m.quoted && (m.quoted.text || m.quoted.body || m.quoted.caption || '').trim()) || ''
 if (!ftIn) return reply(`Usage: ${prefix}square [text]`)
@@ -6346,6 +6465,7 @@ reply([...ftIn].map(c=>sqMap[c]||c).join(''))
 } break
 
 case 'squarebold': {
+    await X.sendMessage(m.chat, { react: { text: '🟥', key: m.key } })
 if (!isOwner) return reply(mess.OnlyOwner)
 let ftIn = text || (m.quoted && (m.quoted.text || m.quoted.body || m.quoted.caption || '').trim()) || ''
 if (!ftIn) return reply(`Usage: ${prefix}squarebold [text]`)
@@ -6354,6 +6474,7 @@ reply([...ftIn].map(c=>sqbMap[c]||c).join(''))
 } break
 
 case 'wide': {
+    await X.sendMessage(m.chat, { react: { text: '🔡', key: m.key } })
 if (!isOwner) return reply(mess.OnlyOwner)
 let ftIn = text || (m.quoted && (m.quoted.text || m.quoted.body || m.quoted.caption || '').trim()) || ''
 if (!ftIn) return reply(`Usage: ${prefix}wide [text]`)
@@ -6361,6 +6482,7 @@ reply([...ftIn].map(c=>{let code=c.charCodeAt(0);return (code>=33&&code<=126)?St
 } break
 
 case 'upsidedown': {
+    await X.sendMessage(m.chat, { react: { text: '🙃', key: m.key } })
 if (!isOwner) return reply(mess.OnlyOwner)
 let ftIn = text || (m.quoted && (m.quoted.text || m.quoted.body || m.quoted.caption || '').trim()) || ''
 if (!ftIn) return reply(`Usage: ${prefix}upsidedown [text]`)
@@ -6369,6 +6491,7 @@ reply([...ftIn].map(c=>udMap[c]||c).join('').split('').reverse().join(''))
 } break
 
 case 'strikethrough': {
+    await X.sendMessage(m.chat, { react: { text: '~~', key: m.key } })
 if (!isOwner) return reply(mess.OnlyOwner)
 let ftIn = text || (m.quoted && (m.quoted.text || m.quoted.body || m.quoted.caption || '').trim()) || ''
 if (!ftIn) return reply(`Usage: ${prefix}strikethrough [text]`)
@@ -6376,6 +6499,7 @@ reply([...ftIn].map(c=>c+'\u0336').join(''))
 } break
 
 case 'underline': {
+    await X.sendMessage(m.chat, { react: { text: '📏', key: m.key } })
 if (!isOwner) return reply(mess.OnlyOwner)
 let ftIn = text || (m.quoted && (m.quoted.text || m.quoted.body || m.quoted.caption || '').trim()) || ''
 if (!ftIn) return reply(`Usage: ${prefix}underline [text]`)
@@ -6383,6 +6507,7 @@ reply([...ftIn].map(c=>c+'\u0332').join(''))
 } break
 
 case 'superscript': {
+    await X.sendMessage(m.chat, { react: { text: '⁰', key: m.key } })
 if (!isOwner) return reply(mess.OnlyOwner)
 let ftIn = text || (m.quoted && (m.quoted.text || m.quoted.body || m.quoted.caption || '').trim()) || ''
 if (!ftIn) return reply(`Usage: ${prefix}superscript [text]`)
@@ -6391,6 +6516,7 @@ reply([...ftIn].map(c=>sspMap[c]||c).join(''))
 } break
 
 case 'subscript': {
+    await X.sendMessage(m.chat, { react: { text: '₀', key: m.key } })
 if (!isOwner) return reply(mess.OnlyOwner)
 let ftIn = text || (m.quoted && (m.quoted.text || m.quoted.body || m.quoted.caption || '').trim()) || ''
 if (!ftIn) return reply(`Usage: ${prefix}subscript [text]`)
@@ -6399,6 +6525,7 @@ reply([...ftIn].map(c=>subMap[c]||c).join(''))
 } break
 
 case 'medieval': {
+    await X.sendMessage(m.chat, { react: { text: '🏰', key: m.key } })
 if (!isOwner) return reply(mess.OnlyOwner)
 let ftIn = text || (m.quoted && (m.quoted.text || m.quoted.body || m.quoted.caption || '').trim()) || ''
 if (!ftIn) return reply(`Usage: ${prefix}medieval [text]`)
@@ -6407,6 +6534,7 @@ reply([...ftIn].map(c=>medMap[c]||c).join(''))
 } break
 
 case 'circled': {
+    await X.sendMessage(m.chat, { react: { text: '⭕', key: m.key } })
 if (!isOwner) return reply(mess.OnlyOwner)
 let ftIn = text || (m.quoted && (m.quoted.text || m.quoted.body || m.quoted.caption || '').trim()) || ''
 if (!ftIn) return reply(`Usage: ${prefix}circled [text]`)
@@ -6415,6 +6543,7 @@ reply([...ftIn].map(c=>cirMap[c]||c).join(''))
 } break
 
 case 'negative': {
+    await X.sendMessage(m.chat, { react: { text: '🔲', key: m.key } })
 if (!isOwner) return reply(mess.OnlyOwner)
 let ftIn = text || (m.quoted && (m.quoted.text || m.quoted.body || m.quoted.caption || '').trim()) || ''
 if (!ftIn) return reply(`Usage: ${prefix}negative [text]`)
@@ -6423,6 +6552,7 @@ reply([...ftIn].map(c=>negMap[c]||c).join(''))
 } break
 
 case 'parenthesized': {
+    await X.sendMessage(m.chat, { react: { text: '〔〕', key: m.key } })
 if (!isOwner) return reply(mess.OnlyOwner)
 let ftIn = text || (m.quoted && (m.quoted.text || m.quoted.body || m.quoted.caption || '').trim()) || ''
 if (!ftIn) return reply(`Usage: ${prefix}parenthesized [text]`)
@@ -6431,6 +6561,7 @@ reply([...ftIn].map(c=>parMap[c]||c).join(''))
 } break
 
 case 'gothic': {
+    await X.sendMessage(m.chat, { react: { text: '🦇', key: m.key } })
 if (!isOwner) return reply(mess.OnlyOwner)
 let ftIn = text || (m.quoted && (m.quoted.text || m.quoted.body || m.quoted.caption || '').trim()) || ''
 if (!ftIn) return reply(`Usage: ${prefix}gothic [text]`)
@@ -6439,6 +6570,7 @@ reply([...ftIn].map(c=>gotMap[c]||c).join(''))
 } break
 
 case 'cursive': {
+    await X.sendMessage(m.chat, { react: { text: '✒️', key: m.key } })
 if (!isOwner) return reply(mess.OnlyOwner)
 let ftIn = text || (m.quoted && (m.quoted.text || m.quoted.body || m.quoted.caption || '').trim()) || ''
 if (!ftIn) return reply(`Usage: ${prefix}cursive [text]`)
@@ -6447,6 +6579,7 @@ reply([...ftIn].map(c=>crvMap[c]||c).join(''))
 } break
 
 case 'aesthetic': {
+    await X.sendMessage(m.chat, { react: { text: '✨', key: m.key } })
 if (!isOwner) return reply(mess.OnlyOwner)
 let ftIn = text || (m.quoted && (m.quoted.text || m.quoted.body || m.quoted.caption || '').trim()) || ''
 if (!ftIn) return reply(`Usage: ${prefix}aesthetic [text]`)
@@ -6455,6 +6588,7 @@ reply([...ftIn].map(c=>aesMap[c]||c).join(''))
 } break
 
 case 'tiny': {
+    await X.sendMessage(m.chat, { react: { text: '🔹', key: m.key } })
 if (!isOwner) return reply(mess.OnlyOwner)
 let ftIn = text || (m.quoted && (m.quoted.text || m.quoted.body || m.quoted.caption || '').trim()) || ''
 if (!ftIn) return reply(`Usage: ${prefix}tiny [text]`)
@@ -6463,6 +6597,7 @@ reply([...ftIn].map(c=>tnyMap[c]||c).join(''))
 } break
 
 case 'inverted': {
+    await X.sendMessage(m.chat, { react: { text: '🔄', key: m.key } })
 if (!isOwner) return reply(mess.OnlyOwner)
 let ftIn = text || (m.quoted && (m.quoted.text || m.quoted.body || m.quoted.caption || '').trim()) || ''
 if (!ftIn) return reply(`Usage: ${prefix}inverted [text]`)
@@ -6471,6 +6606,7 @@ reply([...ftIn].map(c=>invMap[c]||c).join('').split('').reverse().join(''))
 } break
 
 case 'mirror': {
+    await X.sendMessage(m.chat, { react: { text: '🔁', key: m.key } })
 if (!isOwner) return reply(mess.OnlyOwner)
 let ftIn = text || (m.quoted && (m.quoted.text || m.quoted.body || m.quoted.caption || '').trim()) || ''
 if (!ftIn) return reply(`Usage: ${prefix}mirror [text]`)
@@ -6479,6 +6615,7 @@ reply([...ftIn].map(c=>mirMap[c]||c).join('').split('').reverse().join(''))
 } break
 
 case 'currency': {
+    await X.sendMessage(m.chat, { react: { text: '💱', key: m.key } })
 if (!isOwner) return reply(mess.OnlyOwner)
 let ftIn = text || (m.quoted && (m.quoted.text || m.quoted.body || m.quoted.caption || '').trim()) || ''
 if (!ftIn) return reply(`Usage: ${prefix}currency [text]`)
@@ -6487,6 +6624,7 @@ reply([...ftIn].map(c=>curMap[c]||c).join(''))
 } break
 
 case 'dotted': {
+    await X.sendMessage(m.chat, { react: { text: '·', key: m.key } })
 if (!isOwner) return reply(mess.OnlyOwner)
 let ftIn = text || (m.quoted && (m.quoted.text || m.quoted.body || m.quoted.caption || '').trim()) || ''
 if (!ftIn) return reply(`Usage: ${prefix}dotted [text]`)
@@ -6495,6 +6633,7 @@ reply([...ftIn].map(c=>dotMap[c]||c).join(''))
 } break
 
 case 'oldeng': {
+    await X.sendMessage(m.chat, { react: { text: '📜', key: m.key } })
 if (!isOwner) return reply(mess.OnlyOwner)
 let ftIn = text || (m.quoted && (m.quoted.text || m.quoted.body || m.quoted.caption || '').trim()) || ''
 if (!ftIn) return reply(`Usage: ${prefix}oldeng [text]`)
@@ -6503,6 +6642,7 @@ reply([...ftIn].map(c=>oengMap[c]||c).join(''))
 } break
 
 case 'allfonts': {
+    await X.sendMessage(m.chat, { react: { text: '🔤', key: m.key } })
 if (!isOwner) return reply(mess.OnlyOwner)
 let ftIn = text || (m.quoted && (m.quoted.text || m.quoted.body || m.quoted.caption || '').trim()) || ''
 if (!ftIn) return reply(`Usage: ${prefix}allfonts [text]`)
@@ -6566,6 +6706,7 @@ case 'sand':
 case 'blackpink':
 case 'glitch':
 case 'fire': {
+    await X.sendMessage(m.chat, { react: { text: '🔥', key: m.key } })
 let _tmRaw = text || (m.quoted && (m.quoted.text || m.quoted.caption || m.quoted.body || '').trim()) || ''
 // Strip any "*Xxx Text:*" or "Text:*" prefixes from quoted bot replies to prevent nesting
 let tmText = _tmRaw.replace(/^(\*[\w\s]+ Text:\*\s*)+/i, '').replace(/^(Text:\*\s*)+/i, '').trim()
@@ -6742,6 +6883,7 @@ await new Promise((resolve) => {
 //━━━━━━━━━━━━━━━━━━━━━━━━//
 // Image Edit Commands
 case 'heart': {
+    await X.sendMessage(m.chat, { react: { text: '❤️', key: m.key } })
 if (!m.quoted || !/image/.test(m.quoted.mimetype || '')) {
 let heartTarget = (m.mentionedJid && m.mentionedJid[0]) ? m.mentionedJid[0] : sender
 X.sendMessage(from, { text: `*💕 ${pushname} sends love to @${heartTarget.split('@')[0]}! 💕*`, mentions: [heartTarget] }, { quoted: m })
@@ -6749,12 +6891,14 @@ X.sendMessage(from, { text: `*💕 ${pushname} sends love to @${heartTarget.spli
 } break
 
 case 'horny': {
+    await X.sendMessage(m.chat, { react: { text: '🔥', key: m.key } })
 let hornyTarget = (m.mentionedJid && m.mentionedJid[0]) ? m.mentionedJid[0] : m.quoted ? m.quoted.sender : sender
 let hornyLevel = Math.floor(Math.random() * 101)
 X.sendMessage(from, { text: `*Horny Meter:*\n@${hornyTarget.split('@')[0]}\n\n${'🔥'.repeat(Math.floor(hornyLevel/10))}${'⬜'.repeat(10 - Math.floor(hornyLevel/10))} ${hornyLevel}%`, mentions: [hornyTarget] }, { quoted: m })
 } break
 
 case 'circle': {
+    await X.sendMessage(m.chat, { react: { text: '⭕', key: m.key } })
 if (!m.quoted || !/image/.test(m.quoted.mimetype || '')) return reply(`Reply to an image with ${prefix}circle`)
 try {
 let buf = await m.quoted.download()
@@ -6763,57 +6907,68 @@ await X.sendMessage(m.chat, { sticker: buf }, { quoted: m })
 } break
 
 case 'lgbt': {
+    await X.sendMessage(m.chat, { react: { text: '🌈', key: m.key } })
 let lgbtTarget = (m.mentionedJid && m.mentionedJid[0]) ? m.mentionedJid[0] : sender
 X.sendMessage(from, { text: `*🏳️‍🌈 @${lgbtTarget.split('@')[0]} supports LGBTQ+! 🏳️‍🌈*\n🌈 Love is Love 🌈`, mentions: [lgbtTarget] }, { quoted: m })
 } break
 
 case 'lolice': {
+    await X.sendMessage(m.chat, { react: { text: '👮', key: m.key } })
 let loliceTarget = (m.mentionedJid && m.mentionedJid[0]) ? m.mentionedJid[0] : sender
 X.sendMessage(from, { text: `*🚨 LOLICE ALERT! 🚨*\n@${loliceTarget.split('@')[0]} has been caught by the Lolice! 🚔`, mentions: [loliceTarget] }, { quoted: m })
 } break
 
 case 'namecard': {
+    await X.sendMessage(m.chat, { react: { text: '🪪', key: m.key } })
 let ncName = text || pushname
 reply(`╔══════════════╗\n   *${ncName}*\n   ${global.botname}\n╚══════════════╝`)
 } break
 
 case 'tweet': {
+    await X.sendMessage(m.chat, { react: { text: '🐦', key: m.key } })
 if (!text) return reply(`Example: ${prefix}tweet I love coding!`)
 reply(`*Tweet by @${pushname}:*\n\n${text}\n\n❤️ ${Math.floor(Math.random() * 10000)}  🔁 ${Math.floor(Math.random() * 5000)}  💬 ${Math.floor(Math.random() * 1000)}`)
 } break
 
 case 'ytcomment': {
+    await X.sendMessage(m.chat, { react: { text: '💬', key: m.key } })
 if (!text) return reply(`Example: ${prefix}ytcomment This video is amazing!`)
 reply(`*YouTube Comment:*\n\n👤 *${pushname}*\n${text}\n\n👍 ${Math.floor(Math.random() * 5000)}  👎  💬 ${Math.floor(Math.random() * 200)} replies`)
 } break
 
 case 'comrade': {
+    await X.sendMessage(m.chat, { react: { text: '☭', key: m.key } })
 let comradeTarget = (m.mentionedJid && m.mentionedJid[0]) ? m.mentionedJid[0] : sender
 X.sendMessage(from, { text: `*☭ Our Comrade @${comradeTarget.split('@')[0]}! ☭*\nServing the motherland with honor!`, mentions: [comradeTarget] }, { quoted: m })
 } break
 
 case 'gay': {
+    await X.sendMessage(m.chat, { react: { text: '🌈', key: m.key } })
 let gayTarget = (m.mentionedJid && m.mentionedJid[0]) ? m.mentionedJid[0] : sender
 let gayLevel = Math.floor(Math.random() * 101)
 X.sendMessage(from, { text: `*Gay Meter:*\n@${gayTarget.split('@')[0]}\n\n${'🏳️‍🌈'.repeat(Math.floor(gayLevel/10))}${'⬜'.repeat(10 - Math.floor(gayLevel/10))} ${gayLevel}%`, mentions: [gayTarget] }, { quoted: m })
 } break
 
 case 'glass': {
+    await X.sendMessage(m.chat, { react: { text: '🕶️', key: m.key } })
 if (!m.quoted || !/image/.test(m.quoted.mimetype || '')) return reply(`Reply to an image with ${prefix}glass`)
 reply('*Glass effect applied!* 🪟')
 } break
 
 case 'jail': {
+    await X.sendMessage(m.chat, { react: { text: '⛓️', key: m.key } })
 let jailTarget = (m.mentionedJid && m.mentionedJid[0]) ? m.mentionedJid[0] : sender
 X.sendMessage(from, { text: `*🔒 @${jailTarget.split('@')[0]} has been jailed! 🔒*\nCrime: Being too awesome\nSentence: Life 😂`, mentions: [jailTarget] }, { quoted: m })
 } break
 
 case 'passed': {
+    await X.sendMessage(m.chat, { react: { text: '✅', key: m.key } })
 let passedTarget = (m.mentionedJid && m.mentionedJid[0]) ? m.mentionedJid[0] : sender
 X.sendMessage(from, { text: `*✅ @${passedTarget.split('@')[0]} has PASSED! ✅*\nCongratulations! 🎉`, mentions: [passedTarget] }, { quoted: m })
 } break
 
 case 'triggered': {
+    await X.sendMessage(m.chat, { react: { text: '😡', key: m.key } })
 let triggeredTarget = (m.mentionedJid && m.mentionedJid[0]) ? m.mentionedJid[0] : sender
 X.sendMessage(from, { text: `*⚡ @${triggeredTarget.split('@')[0]} is TRIGGERED! ⚡*\n😤😤😤`, mentions: [triggeredTarget] }, { quoted: m })
 } break
@@ -6822,6 +6977,7 @@ X.sendMessage(from, { text: `*⚡ @${triggeredTarget.split('@')[0]} is TRIGGERED
 // GitHub Commands
 case 'git':
 case 'github': {
+    await X.sendMessage(m.chat, { react: { text: '🐙', key: m.key } })
 if (!text) return reply(`Example: ${prefix}github torvalds`)
 try {
 let res = await fetch(`https://api.github.com/users/${encodeURIComponent(text)}`)
@@ -6835,6 +6991,7 @@ await X.sendMessage(m.chat, { image: { url: data.avatar_url }, caption: info }, 
 } break
 
 case 'repo': {
+    await X.sendMessage(m.chat, { react: { text: '📦', key: m.key } })
 try {
 let repoPath = text && text.includes('/') ? text : text ? text + '/' + text : 'TOOSII102/TOOSII-XD-ULTRA'
 let res = await fetch(`https://api.github.com/repos/${encodeURIComponent(repoPath)}`)
@@ -6861,6 +7018,7 @@ reply(repoInfo)
 case 'sc':
 case 'script':
 case 'source': {
+    await X.sendMessage(m.chat, { react: { text: '📜', key: m.key } })
 let scText = `╭━━━〔 📂 *SOURCE CODE* 〕━━━╮
 │
 │ 🤖 *${global.botname}*
@@ -6884,6 +7042,7 @@ reply(scText)
 } break
 
 case 'clone': {
+    await X.sendMessage(m.chat, { react: { text: '📦', key: m.key } })
 if (!text) return reply(`Example: ${prefix}clone https://github.com/user/repo`)
 try {
 let match = text.match(/github\.com\/([^\/]+)\/([^\/\s]+)/)
